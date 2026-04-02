@@ -1,8 +1,9 @@
 import routeros_api
 import sys
 import os
+import config_mk as cfg  # <--- IMPORTAMOS TU CEREBRO CONFIG_MK
 
-# Configuración de ruta
+# Configuración de ruta (Mantenemos tu lógica de ruta relativa)
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # Argumentos: 1:usuario, 2:accion (vencido/pagado)
@@ -13,26 +14,25 @@ if len(sys.argv) < 3:
 user_mikrotik = sys.argv[1]
 accion = sys.argv[2]
 
-HOST = '192.168.60.1'
-USER = 'admin'
-PASS = '23763941'
-
 try:
-    connection = routeros_api.RouterOsApiPool(HOST, username=USER, password=PASS, plaintext_login=True)
+    # USAMOS LAS VARIABLES DEL CEREBRO CENTRAL
+    connection = routeros_api.RouterOsApiPool(
+        cfg.HOST, 
+        username=cfg.USER, 
+        password=cfg.PASS, 
+        plaintext_login=True
+    )
     api = connection.get_api()
     
     res_active = api.get_resource('/ppp/active')
     res_addr = api.get_resource('/ip/firewall/address-list')
 
-    # --- LÓGICA 1: CORTE AUTOMÁTICO (Solo si no ha pagado) ---
+    # --- LÓGICA 1: CORTE AUTOMÁTICO ---
     if accion.lower() == 'vencido':
-        # Antes de cortar, el sistema verifica si está conectado
         sesion = res_active.get(name=user_mikrotik)
         
         if sesion:
             ip_actual = sesion[0].get('address')
-            
-            # Verificamos si ya está en la lista
             check = res_addr.get(address=ip_actual, list='CORTADOS')
             
             if not check:
@@ -45,12 +45,12 @@ try:
             else:
                 print(f"SISTEMA: {user_mikrotik} ya estaba en la lista de corte.")
         else:
-            print(f"SISTEMA: {user_mikrotik} vencido pero desconectado. Se cortará al conectar.")
+            print(f"SISTEMA: {user_mikrotik} vencido pero desconectado.")
 
-    # --- LÓGICA 2: ACTIVACIÓN Y PROTECCIÓN (Si pagó antes de la fecha) ---
+    # --- LÓGICA 2: ACTIVACIÓN Y PROTECCIÓN ---
     elif accion.lower() == 'pagado':
-        # 1. Si ya estaba cortado, lo saca de la lista (Activación)
-        entradas = res_addr.get()
+        # Buscamos en la lista 'CORTADOS' por comentario para ser precisos
+        entradas = res_addr.get(list='CORTADOS')
         fue_liberado = False
         
         for e in entradas:
@@ -61,11 +61,9 @@ try:
         if fue_liberado:
             print(f"SISTEMA: {user_mikrotik} ha pagado. Activado de inmediato.")
         else:
-            # 2. Si no estaba cortado, el sistema lo registra como "Protegido"
-            # Esta parte es vital: PHP no enviará la orden de 'vencido' si el estatus es 'pagado'
-            print(f"SISTEMA: {user_mikrotik} pago registrado. Protegido contra el corte.")
+            print(f"SISTEMA: {user_mikrotik} pago registrado. Protegido.")
 
     connection.disconnect()
 
 except Exception as e:
-    print(f"ERROR: {e}")
+    print(f"ERROR EN PRO-DARK CORTE: {e}")

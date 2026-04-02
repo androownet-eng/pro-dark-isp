@@ -1,32 +1,31 @@
 <?php
-// --- CONFIGURACIÓN DE CONEXIÓN ---
-$conn = new mysqli("localhost", "root", "", "isp_gestion");
+// 1. IMPORTAR CEREBRO GLOBAL
+// Esto elimina la necesidad de configurar la conexión y rutas aquí mismo.
+require_once "config_global.php"; 
 
-// IMPORTANTE: Ajusta tu zona horaria para que coincida con MikroTik
+// IMPORTANTE: Mantenemos tu zona horaria para precisión con el MikroTik
 date_default_timezone_set('America/Caracas'); 
 
 $dia_actual = (int)date('j');
 $hoy = date('Y-m-d');
 $hora_actual = date('H:i:s');
 
-// Rutas absolutas para evitar errores en el lanzador
-$python = "C:/Users/Androow/AppData/Local/Programs/Python/Python37/python.exe";
-$script = "C:/xampp/htdocs/gestion/estado_cliente.py";
+// Usamos las variables que vienen de config_global.php
+$py_exe = $python_path; 
+$py_script = $base_dir . "estado_cliente.py";
 
 echo "==============================================\n";
-echo "   REVISIÓN PRO-DARK ISP - MOTOR DE CORTE     \n";
+echo "   REVISION PRO-DARK ISP - MOTOR DE CORTE     \n";
 echo "   Fecha: $hoy | Hora: $hora_actual           \n";
 echo "==============================================\n";
 
-// 1. GESTIÓN DE PROTECCIÓN (Escudos)
-// A. Poner escudo (proteccion=1) si: hay pago futuro O el manual está activo
+// 2. GESTIÓN DE PROTECCIÓN (Escudos)
+// Simplificamos la lógica: Si pagó a futuro o tiene protección manual, tiene escudo.
 $conn->query("UPDATE abonados SET proteccion = 1 WHERE (pagado_hasta >= '$hoy' OR proteccion_manual = 1)");
-
-// B. QUITAR escudo (proteccion=0) si: el pago ya venció Y el manual está apagado
 $conn->query("UPDATE abonados SET proteccion = 0 WHERE pagado_hasta < '$hoy' AND proteccion_manual = 0");
 
 
-// 2. BUSCAR TODOS LOS ABONADOS PARA PROCESAR ESTADOS
+// 3. PROCESAMIENTO DE ESTADOS
 $todos = $conn->query("SELECT user_mikrotik, plan, estado, dia_pago, proteccion, hora_corte FROM abonados");
 
 $cambios = 0;
@@ -38,58 +37,55 @@ while ($r = $todos->fetch_assoc()) {
     $dia_pago = (int)$r['dia_pago'];
     $hora_corte = $r['hora_corte'];
 
-    // LÓGICA DE DECISIÓN PRO-DARK
     $debe_estar_cortado = false;
     
     if ($proteccion == 0) {
-        // Si el día de pago ya pasó
+        // Lógica Pro-Dark: Día vencido O Día actual después de la hora
         if ($dia_pago < $dia_actual) {
             $debe_estar_cortado = true;
         } 
-        // Si el día de pago es hoy pero ya pasó la hora de corte
         elseif ($dia_pago == $dia_actual && $hora_actual >= $hora_corte) {
             $debe_estar_cortado = true;
         }
     }
 
-    // --- APLICACIÓN DE CAMBIOS (ORDEN CORREGIDO: DB PRIMERO) ---
+    // --- SINCRONIZACIÓN (DB -> MikroTik) ---
 
-    // CASO A: El sistema decide que debe estar CORTADO pero en DB figura ACTIVO
+    // CASO A: Vencimiento detectado
     if ($debe_estar_cortado && $estado_db != 'cortado') {
-        echo "[!] EVENTO: Vencimiento detectado para -> $u\n";
+        echo "[!] EVENTO: Vencimiento -> $u\n";
         
-        // 1. PRIMERO: Actualizamos la Base de Datos
         $conn->query("UPDATE abonados SET estado = 'cortado' WHERE user_mikrotik = '$u'");
         
-        // 2. SEGUNDO: Llamamos a Python con modo SYNC (Ahora leerá 'cortado' de la DB)
-        shell_exec("\"$python\" \"$script\" \"$u\" \"sync\"");
+        // Llamada centralizada a Python
+        shell_exec("\"$py_exe\" \"$py_script\" \"$u\" \"sync\"");
         
-        echo "    RESULTADO: Cliente enviado a perfil CORTE y pateado.\n";
+        echo "    SISTEMA: Perfil CORTE aplicado.\n";
         $cambios++;
     } 
     
-    // CASO B: El sistema decide que debe estar ACTIVO pero en DB figura CORTADO
+    // CASO B: Reactivación (Por pago o cambio de fecha)
     elseif (!$debe_estar_cortado && $estado_db != 'activo') {
-        echo "[*] EVENTO: Reactivación/Sincronía para -> $u\n";
+        echo "[*] EVENTO: Reactivación -> $u\n";
         
-        // 1. PRIMERO: Actualizamos la Base de Datos
         $conn->query("UPDATE abonados SET estado = 'activo' WHERE user_mikrotik = '$u'");
         
-        // 2. SEGUNDO: Llamamos a Python (Ahora leerá 'activo' de la DB)
-        shell_exec("\"$python\" \"$script\" \"$u\" \"sync\"");
+        // Llamada centralizada a Python
+        shell_exec("\"$py_exe\" \"$py_script\" \"$u\" \"sync\"");
         
-        echo "    RESULTADO: Perfil actualizado a plan real y cliente reactivado.\n";
+        echo "    SISTEMA: Cliente reactivado con su plan real.\n";
         $cambios++;
     }
 }
 
-// Resumen del ciclo
 if ($cambios == 0) {
-    echo "[-] STATUS: Todo en orden. No hubo cambios.\n";
+    echo "[-] STATUS: Sin cambios pendientes.\n";
 } else {
-    echo "[OK] STATUS: Se aplicaron $cambios correcciones con éxito.\n";
+    echo "[OK] STATUS: $cambios correcciones aplicadas.\n";
 }
 
 echo "----------------------------------------------\n\n";
+// No cerramos $conn aquí si planeas incluir este archivo en otros, 
+// pero para el Guardián está bien que se cierre al terminar el script.
 $conn->close();
 ?>

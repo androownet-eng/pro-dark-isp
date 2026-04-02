@@ -10,10 +10,10 @@ if (!isset($_SESSION['admin_auth'])) {
     exit();
 }
 
-// 1. CONFIGURACIÓN GLOBAL
-$python = "C:/Users/Androow/AppData/Local/Programs/Python/Python37/python.exe";
-$dir = "C:/xampp/htdocs/gestion/";
-$conn = new mysqli("localhost", "root", "", "isp_gestion");
+// 1. IMPORTAR CONFIGURACIÓN CENTRALIZADA
+require_once "config_global.php";
+$python = $python_path; // Ahora usa la variable del cerebro
+$dir = $base_dir;       // Ahora usa la variable del cerebro
 
 $dia_actual = date('j');
 $mes_actual_inicio = date('Y-m-01'); 
@@ -29,7 +29,7 @@ if (isset($_GET['get_status_live'])) {
 }
 
 // 2. MONITOR LIVE (Puntos ON/OFF)
-$ips_json = shell_exec("\"$python\" \"{$dir}obtener_ips.py\" 2>&1");
+$ips_json = shell_exec("\"$python\" \"$dir" . "obtener_ips.py\" 2>&1");
 $ips_online = json_decode($ips_json, true) ?: [];
 
 // --- 3. PROCESAMIENTO DE ACCIONES (MOTOR UNIFICADO) ---
@@ -57,7 +57,7 @@ if (isset($_GET['accion']) && isset($_GET['user'])) {
         $conn->query("UPDATE abonados SET estado='activo', prorroga_hasta='$vencimiento' WHERE user_mikrotik='$u'");
     }
 
-    shell_exec("\"$python\" \"{$dir}estado_cliente.py\" \"$u\" \"sync\" 2>&1");
+    shell_exec("\"$python\" \"$dir" . "estado_cliente.py\" \"$u\" \"sync\" 2>&1");
     if (isset($_GET['ajax'])) exit;
     header("Location: config.php"); exit;
 }
@@ -75,7 +75,7 @@ if (isset($_POST['crear_usuario'])) {
 
     if ($conn->query($sql)) {
         // Se envía a Python: usuario, acción, plan y la CONTRASEÑA nueva
-        $comando = "\"$python\" \"{$dir}estado_cliente.py\" \"$u\" \"activar\" \"$p_plan\" \"$p_pass\"";
+        $comando = "\"$python\" \"$dir" . "estado_cliente.py\" \"$u\" \"activar\" \"$p_plan\" \"$p_pass\"";
         shell_exec($comando . " 2>&1");
 
         header("Location: config.php?res=creado"); 
@@ -90,7 +90,7 @@ if (isset($_GET['delete_user'])) {
     $u = $conn->real_escape_string($_GET['delete_user']);
 
     // 1. Mandamos la orden a Python para eliminar del MikroTik (RB4011)
-    $comando_del = "\"$python\" \"{$dir}estado_cliente.py\" \"$u\" \"eliminar\" 2>&1";
+    $comando_del = "\"$python\" \"$dir" . "estado_cliente.py\" \"$u\" \"eliminar\" 2>&1";
     shell_exec($comando_del);
 
     // 2. Ahora lo borramos de la base de datos
@@ -118,10 +118,12 @@ if (isset($_POST['editar_cliente'])) {
     header("Location: config.php?res=editado"); exit;
 }
 
-// D. Sincronizar Ahora (CORRECCIÓN LÍNEA 104)
+// D. Sincronizar Ahora (AUTOMATIZADO)
 if (isset($_POST['sincronizar_ahora'])) {
-    $py_exe = 'C:/Users/Androow/AppData/Local/Programs/Python/Python37/python.exe';
-    $py_script = 'C:/xampp/htdocs/gestion/estado_cliente.py';
+    // Usamos directamente las variables que vienen del cerebro global
+    $py_exe = $python; 
+    $py_script = $dir . "estado_cliente.py"; 
+    
     $res = $conn->query("SELECT user_mikrotik FROM abonados");
     
     while ($row = $res->fetch_assoc()) {

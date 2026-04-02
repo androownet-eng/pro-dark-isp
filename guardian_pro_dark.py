@@ -3,46 +3,57 @@ import time
 import os
 import sys
 
-# --- CONFIGURACIÓN DE RUTAS ---
-# Usamos r"" para evitar problemas con las barras invertidas de Windows
-PHP_PATH = r"C:\xampp\php\php.exe"
-REVISAR_FECHAS_PHP = r"C:\xampp\htdocs\gestion\revisar_fechas.php"
+# Intentamos importar el config con validación
+try:
+    import config_mk as cfg
+except ImportError:
+    print("ERROR: No se encontró 'config_mk.py'.")
+    sys.exit()
 
-# Título de la ventana (Solo para Windows)
+# Validación de variables necesarias
+try:
+    PHP_PATH = cfg.PHP_EXE
+    BASE_DIR = cfg.BASE_DIR
+except AttributeError:
+    print("ERROR: Falta definir PHP_EXE o BASE_DIR en config_mk.py")
+    sys.exit()
+
+REVISAR_FECHAS_PHP = os.path.join(BASE_DIR, "revisar_fechas.php")
+
 os.system("title GUARDIAN PRO-DARK ISP - Activo")
 
 def ejecutar_revision():
-    print(f"[{time.strftime('%H:%M:%S')}] --- Iniciando ciclo de monitoreo ---")
+    ahora = time.strftime('%H:%M:%S')
+    print(f"[{ahora}] --- Escaneando abonados ---")
+    
     try:
-        # El Guardián activa al ejecutor PHP
-        # capture_output=True permite que lo que diga el PHP se vea aquí en Python
         proceso = subprocess.run(
             [PHP_PATH, REVISAR_FECHAS_PHP], 
             capture_output=True, 
             text=True,
-            encoding='latin-1' # Para evitar errores con tildes o caracteres especiales
+            encoding='latin-1' 
         )
         
-        # Mostramos en pantalla lo que el sistema encontró
         if proceso.stdout:
-            print(f"RESULTADO:\n{proceso.stdout.strip()}")
+            print(f"SISTEMA: {proceso.stdout.strip()}")
         
         if proceso.stderr:
-            print(f"AVISO SISTEMA: {proceso.stderr.strip()}")
+            # Esto captura errores de PHP (como fallos de conexión a la DB)
+            print(f"ALERTA: {proceso.stderr.strip()}")
 
     except Exception as e:
-        print(f"ERROR CRÍTICO: No se pudo ejecutar la revisión. {e}")
+        print(f"¡ERROR CRÍTICO!: {e}")
 
-# --- BUCLE INFINITO ---
+# --- BUCLE PRINCIPAL ---
 print("==============================================")
-print("     SISTEMA DE MONITOREO PRO-DARK ISP        ")
-print("          NTP SINCRONIZADO - ACTIVO           ")
+print("     GUARDIAN ACTIVO - PRO-DARK ISP           ")
+print(f"     MONITORIANDO: {REVISAR_FECHAS_PHP}      ")
 print("==============================================")
-print("Presiona Ctrl+C para detener el monitoreo.\n")
 
-while True:
-    ejecutar_revision()
-    
-    # Espera 60 segundos (1 minuto) antes de la próxima revisión
-    # Puedes bajarlo a 30 si quieres más precisión
-    time.sleep(60)
+try:
+    while True:
+        ejecutar_revision()
+        time.sleep(60) # Revisión cada minuto
+except KeyboardInterrupt:
+    print("\n[!] Guardián detenido por el usuario.")
+    sys.exit()

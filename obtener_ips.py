@@ -1,19 +1,15 @@
 import routeros_api
 import json
 import sys
-
-# CONFIGURACIÓN MIKROTIK (DATOS ACTUALIZADOS)
-host = '192.168.60.1'
-user = 'admin'
-password = '23763941'
+import config_mk as cfg  # <--- CONECTAMOS AL CEREBRO PYTHON
 
 def obtener_usuarios_online():
     try:
-        # Conexión al MikroTik
+        # Usamos las variables globales de config_mk.py
         connection = routeros_api.RouterOsApiPool(
-            host, 
-            username=user, 
-            password=password, 
+            cfg.HOST, 
+            username=cfg.USER, 
+            password=cfg.PASS, 
             plaintext_login=True
         )
         api = connection.get_api()
@@ -37,8 +33,9 @@ def obtener_usuarios_online():
         return json.dumps(online_dict)
 
     except Exception as e:
-        # En caso de error, devolvemos el mensaje para saber qué falló
+        # Devolvemos el error en formato JSON para no romper el decode de PHP
         return json.dumps({"error": str(e)})
 
 if __name__ == "__main__":
+    # Importante: Solo imprimimos el JSON final
     print(obtener_usuarios_online())

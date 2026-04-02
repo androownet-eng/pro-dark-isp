@@ -2,15 +2,15 @@ import routeros_api
 import mysql.connector
 import sys
 from datetime import datetime
-
-# --- CONFIGURACIÓN (Extraída de tu config.php) ---
-MK_DATA = {'host': '192.168.60.1', 'user': 'admin', 'pass': '23763941'}
-DB_DATA = {'host': 'localhost', 'user': 'root', 'pw': '', 'db': 'isp_gestion'}
+import config_mk as cfg  # <--- IMPORTAMOS TU CEREBRO CONFIG_MK
 
 def conectar_db():
+    # Ahora usamos las variables globales de cfg
     return mysql.connector.connect(
-        host=DB_DATA['host'], user=DB_DATA['user'], 
-        password=DB_DATA['pw'], database=DB_DATA['db']
+        host=cfg.DB_HOST, 
+        user=cfg.DB_USER, 
+        password=cfg.DB_PASS, 
+        database=cfg.DB_NAME
     )
 
 def procesar():
@@ -24,7 +24,14 @@ def procesar():
     try:
         db = conectar_db()
         cursor = db.cursor(dictionary=True)
-        connection = routeros_api.RouterOsApiPool(MK_DATA['host'], username=MK_DATA['user'], password=MK_DATA['pass'], plaintext_login=True)
+        
+        # Usamos los datos de MikroTik del cerebro cfg
+        connection = routeros_api.RouterOsApiPool(
+            cfg.HOST, 
+            username=cfg.USER, 
+            password=cfg.PASS, 
+            plaintext_login=True
+        )
         api = connection.get_api()
         res_ppp = api.get_resource('/ppp/secret')
         res_active = api.get_resource('/ppp/active')
@@ -35,10 +42,14 @@ def procesar():
             if m_user:
                 res_ppp.remove(id=m_user[0]['id'])
                 sesion = res_active.get(name=user_target)
-                for s in sesion: res_active.remove(id=s['id'])
+                for s in sesion: 
+                    try:
+                        res_active.remove(id=s['id'])
+                    except:
+                        pass
             return
 
-        # 2. LECTURA DE LA BASE DE DATOS (Aquí es donde ocurre la magia de la prórroga)
+        # 2. LECTURA DE LA BASE DE DATOS
         cursor.execute("SELECT plan, estado, prorroga_hasta, proteccion, proteccion_manual FROM abonados WHERE user_mikrotik = %s", (user_target,))
         cliente = cursor.fetchone()
         if not cliente: return
@@ -56,6 +67,7 @@ def procesar():
         if accion == 'cortar':
             perfil_objetivo = 'CORTE'
         elif cliente['estado'] == 'cortado':
+            # Solo cortamos si NO tiene prórroga Y NO tiene escudo
             if not tiene_prorroga and not tiene_escudo:
                 perfil_objetivo = 'CORTE'
 
@@ -63,23 +75,37 @@ def procesar():
         m_user = res_ppp.get(name=user_target)
         if m_user:
             uid = m_user[0]['id']
-            # Si el perfil en el MikroTik es distinto al que decidimos aquí, lo cambiamos
-            if m_user[0]['profile'] != perfil_objetivo or (pass_manual and m_user[0]['password'] != pass_manual):
-                res_ppp.set(id=uid, profile=perfil_objetivo)
-                if pass_manual: res_ppp.set(id=uid, password=pass_manual)
-                
+            # Verificamos si hay que actualizar perfil o contraseña
+            cambio_necesario = False
+            
+            params = {}
+            if m_user[0]['profile'] != perfil_objetivo:
+                params['profile'] = perfil_objetivo
+                cambio_necesario = True
+            
+            if pass_manual and m_user[0]['password'] != pass_manual:
+                params['password'] = pass_manual
+                cambio_necesario = True
+            
+            if cambio_necesario:
+                res_ppp.set(id=uid, **params)
                 # Desconectar para aplicar cambio
                 sesion = res_active.get(name=user_target)
-                for s in sesion: res_active.remove(id=s['id'])
+                for s in sesion: 
+                    try:
+                        res_active.remove(id=s['id'])
+                    except:
+                        pass
         else:
-            # Si no existe, lo creamos con los datos del panel
+            # Si no existe, lo creamos (excepto si la orden es cortar a alguien inexistente)
             if perfil_objetivo != 'CORTE':
                 clave = pass_manual if pass_manual else user_target
                 res_ppp.add(name=user_target, password=clave, profile=perfil_objetivo, service='pppoe')
 
         db.close()
         connection.disconnect()
-    except Exception as e: print(f"Error: {e}")
+    except Exception as e: 
+        print(f"Error en Pro-Dark System: {e}")
 
 if __name__ == "__main__":
     procesar()
