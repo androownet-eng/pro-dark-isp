@@ -388,306 +388,320 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
     </details>
 
     <div class="action-bar">
-        <input type="text" id="busqueda" placeholder="🔍 Buscar abonado..." style="padding:12px; border-radius:18px;">
-        
-        <form method="POST" style="display:inline; margin:0;">
-            <button type="submit" name="sincronizar_ahora" class="btn btn-blue" title="Sincronizar Panel -> MikroTik" style="padding:12px; border-radius:18px; width: 45px; height: 45px;"><i class="fas fa-sync"></i></button>
-        </form>
-
-        <form method="POST" style="display:inline; margin:0;">
-            <button type="submit" name="importar_desde_mt" class="btn btn-gray" title="Importar MikroTik -> Panel" style="padding:12px; border-radius:18px; width: 45px; height: 45px; border: 1px dashed var(--primary); color: var(--primary);">
-                <i class="fas fa-file-import"></i>
-            </button>
-        </form>
-
-        <button type="button" onclick="activarModoMasivo()" id="btnM" class="btn btn-orange" style="padding:12px; border-radius:18px; width: 45px; height: 45px;"><b style="font-size:16px;">M</b></button>
-    </div>
-
-    <form method="POST">
-        <div id="barraMasiva" class="mass-bar">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <b id="contador" style="color:var(--warning); font-size:1.1rem; font-weight:800;">0 SELECCIONADOS</b>
-                <button type="button" onclick="cancelarMasivo()" style="background:none; border:none; color:white; font-size:28px;">&times;</button>
-            </div>
-            <select name="plan_masivo">
-                <option value="">-- Cambiar Plan --</option>
-                <?php $p_res2 = $conn->query("SELECT * FROM planes"); while($p2 = $p_res2->fetch_assoc()) { echo "<option value='".$p2['perfil_mikrotik']."'>".$p2['nombre_visible']."</option>"; } ?>
-            </select>
-            <button type="submit" name="accion_masiva" value="cambiar_plan" class="btn btn-orange" style="width:100%; margin-bottom:10px; padding:12px; border-radius:20px;">APLICAR PLAN</button>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <button type="submit" name="accion_masiva" value="activar" class="btn btn-blue">ACTIVA</button>
-                <button type="submit" name="accion_masiva" value="cortar" class="btn" style="background:var(--danger);">CORTA</button>
-            </div>
-        </div>
-
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th class="col-check" style="display:none; text-align:center;"><input type="checkbox" id="checkAll"></th>
-                        <th>CLIENTE / PAGO</th>
-                        <th style="text-align:center;">🛡️ ESCUDO</th> 
-                        <th style="text-align:center;">ESTADO / PING</th>
-                        <th style="text-align:right;">OPCIONES</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaBody">
-                    <?php while($r = $clientes->fetch_assoc()): 
-                        $u = $r['user_mikrotik']; $online = isset($ips_online[$u]);
-                        $manual = ($r['proteccion_manual'] == 1);
-                        $auto = ($r['proteccion'] == 1 && !$manual);
-                        $tiene_prorroga = (!empty($r['prorroga_hasta']) && strtotime($r['prorroga_hasta']) > time());
-                        $esta_realmente_activo = ($r['estado'] == 'activo' || $tiene_prorroga);
-                    ?>
-                    <tr id="fila-<?php echo $u; ?>">
-                        <td class="col-check" style="display:none; text-align:center;"><input type="checkbox" name="usuarios_sel[]" value="<?php echo $u; ?>" class="user-check" onchange="actualizarBarra()"></td>
-                        <td>
-                            <b style="color:var(--primary); font-size:1rem; display:block;"><?php echo $u; ?></b>
-                            <small style="color:var(--text-dim)"><?php echo str_replace('PPPoeClientes-', '', $r['plan']); ?></small><br>
-                            <div style="font-size:11px; background: rgba(59, 130, 246, 0.05); color: var(--primary); padding: 3px 6px; border-radius: 4px; display: inline-block; border: 1px solid rgba(59, 130, 246, 0.1); margin-top: 4px;">
-                                Día <?php echo $r['dia_pago']; ?> @ <?php echo date("h:i A", strtotime($r['hora_corte'])); ?>
-                            </div>
-                        </td>
-
-                        <td style="text-align:center;">
-                            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;">
-                                <label class="shield-switch">
-                                    <input type="checkbox" <?php echo ($manual) ? 'checked' : ''; ?> 
-                                           onclick="ejecutarAccionLive('config.php?accion=toggle_inmunidad&user=<?php echo $u; ?>', this)">
-                                    <span class="shield-slider"></span>
-                                </label>
-                                <span id="shield-icon-<?php echo $u; ?>" style="height:16px;">
-                                    <?php if($manual): ?>
-                                        <i class="fas fa-shield-alt shield-manual" title="Inmunidad Manual"></i>
-                                    <?php elseif($auto): ?>
-                                        <i class="fas fa-shield-alt shield-auto" title="Inmunidad por Pago"></i>
-                                    <?php endif; ?>
-                                </span>
-                            </div>
-                        </td>
-
-                        <td class="td-estado" style="text-align:center;">
-                            <div style="display:flex; align-items:center; justify-content:center; gap:8px;" 
-                                 id="container-<?php echo $u; ?>" 
-                                 data-prorroga="<?php echo $tiene_prorroga ? '1' : '0'; ?>">
-                                <?php if($esta_realmente_activo): ?>
-                                    <i class="fas fa-toggle-on" onclick="ejecutarAccionLive('config.php?accion=cortar&user=<?php echo $u; ?>', this)" style="font-size:24px; color:var(--success); cursor:pointer;"></i>
-                                <?php else: ?>
-                                    <i class="fas fa-toggle-off" onclick="ejecutarAccionLive('config.php?accion=activar_directo&user=<?php echo $u; ?>', this)" style="font-size:24px; color:var(--danger); cursor:pointer;"></i>
-                                <?php endif; ?>
-                                <span class="status-dot <?php echo ($online?'online':'offline'); ?>"></span>
-                            </div>
-                        </td>
-                        
-                        <td style="text-align:right;">
-                            <div class="options-dropdown">
-                                <button type="button" class="options-btn"><i class="fas fa-ellipsis-v"></i></button>
-                                <div class="options-content">
-                                    <button type="button" onclick="solicitarProrroga('<?php echo $u; ?>')" style="color:var(--warning)">
-                                        <i class="fas fa-clock-rotate-left"></i> Dar Prórroga
-                                    </button>
-                                    <button type="button" onclick="abrirEdit('<?php echo $u; ?>', '<?php echo $r['dia_pago']; ?>', '<?php echo $r['hora_corte']; ?>')" style="color:var(--primary)">
-                                        <i class="fas fa-edit"></i> Editar Ficha
-                                    </button>
-                                    <a href="config.php?delete_user=<?php echo $u; ?>" onclick="return confirm('¿Eliminar a <?php echo $u; ?> permanentemente?')" style="color:var(--danger)">
-                                        <i class="fas fa-trash-alt"></i> Eliminar
-                                    </a>
-                                </div>
-                            </div>
-
-                            <?php if($tiene_prorroga): ?>
-                                <br>
-                                <div class="escudo-rojo">
-                                    <i class="fas fa-shield-virus"></i> PRÓRROGA: <?php echo date("d/m H:i", strtotime($r['prorroga_hasta'])); ?>
-                                </div>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                    <?php endwhile; ?>
-                </tbody>
-            </table>
-        </div>
-    </form>
+    <input type="text" id="busqueda" placeholder="🔍 Buscar abonado..." style="padding:12px; border-radius:18px;">
     
-    <div id="modalEdit" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); align-items:center; justify-content:center;">
-        <div style="background:var(--card); max-width:400px; width:90%; padding:25px; border-radius:24px; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5);">
-            <div style="text-align:center; margin-bottom:20px;">
-                <div style="width:60px; height:60px; background:rgba(59, 130, 246, 0.1); color:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:24px; border:1px solid rgba(59, 130, 246, 0.3);">
-                    <i class="fas fa-user-edit"></i>
-                </div>
-                <h3 id="userTit" style="margin:0; color:#fff; font-weight:900; letter-spacing:1px; text-transform:uppercase; font-size:1.2rem;"></h3>
-                <p style="color:var(--text-dim); font-size:12px; margin-top:5px;">Actualizar datos del abonado</p>
-            </div>
+    <form method="POST" style="display:inline; margin:0;">
+        <button type="submit" name="sincronizar_ahora" class="btn btn-blue" title="Sincronizar Panel -> MikroTik" style="padding:12px; border-radius:18px; width: 45px; height: 45px;"><i class="fas fa-sync"></i></button>
+    </form>
 
-            <form method="POST">
-                <input type="hidden" name="user_edit" id="userInp">
-                
-                <div style="margin-bottom:15px;">
-                    <label style="font-size:11px; color:var(--primary); font-weight:800; text-transform:uppercase; margin-left:5px;">Plan de Internet</label>
-                    <select name="nuevo_plan" style="width:100%; padding:15px; margin-top:5px; background:#0f172a; border:1px solid var(--border); color:white; border-radius:15px; font-size:15px; outline:none; appearance:none;">
-                        <?php $p_res3 = $conn->query("SELECT * FROM planes"); while($p3 = $p_res3->fetch_assoc()) { echo "<option value='".$p3['perfil_mikrotik']."'>".$p3['nombre_visible']."</option>"; } ?>
-                    </select>
-                </div>
+    <form method="POST" style="display:inline; margin:0;">
+        <button type="submit" name="importar_desde_mt" class="btn btn-gray" title="Importar MikroTik -> Panel" style="padding:12px; border-radius:18px; width: 45px; height: 45px; border: 1px dashed var(--primary); color: var(--primary);">
+            <i class="fas fa-file-import"></i>
+        </button>
+    </form>
 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                    <div>
-                        <label style="font-size:11px; color:var(--primary); font-weight:800; text-transform:uppercase; margin-left:5px;">Día de Pago</label>
-                        <input type="number" name="nuevo_dia" id="diaInp" style="width:100%; padding:15px; background:#0f172a; border:1px solid var(--border); color:white; border-radius:15px; outline:none; box-sizing:border-box;">
-                    </div>
-                    <div>
-                        <label style="font-size:11px; color:var(--primary); font-weight:800; text-transform:uppercase; margin-left:5px;">Hora Corte</label>
-                        <input type="time" name="nueva_hora" id="horaInp" style="width:100%; padding:15px; background:#0f172a; border:1px solid var(--border); color:white; border-radius:15px; outline:none; box-sizing:border-box;">
-                    </div>
-                </div>
+    <button type="button" onclick="activarModoMasivo()" id="btnM" class="btn btn-orange" style="padding:12px; border-radius:18px; width: 45px; height: 45px;"><b style="font-size:16px;">M</b></button>
+</div>
 
-                <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-top:25px;">
-                    <button type="submit" name="editar_cliente" class="btn btn-blue" style="padding:15px; border-radius:15px; font-weight:800; text-transform:uppercase; letter-spacing:1px;">GUARDAR CAMBIOS</button>
-                    <button type="button" onclick="document.getElementById('modalEdit').style.display='none'" style="padding:10px; background:none; border:none; color:var(--text-dim); cursor:pointer; font-weight:700;">CANCELAR</button>
-                </div>
-            </form>
+<form method="POST">
+    <div id="barraMasiva" class="mass-bar" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <b id="contador" style="color:var(--warning); font-size:1.1rem; font-weight:800;">0 SELECCIONADOS</b>
+            <button type="button" onclick="cancelarMasivo()" style="background:none; border:none; color:white; font-size:28px; cursor:pointer;">&times;</button>
+        </div>
+        <select name="plan_masivo">
+            <option value="">-- Cambiar Plan --</option>
+            <?php $p_res2 = $conn->query("SELECT * FROM planes"); while($p2 = $p_res2->fetch_assoc()) { echo "<option value='".$p2['perfil_mikrotik']."'>".$p2['nombre_visible']."</option>"; } ?>
+        </select>
+        <button type="submit" name="accion_masiva" value="cambiar_plan" class="btn btn-orange" style="width:100%; margin-bottom:10px; padding:12px; border-radius:20px;">APLICAR PLAN</button>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <button type="submit" name="accion_masiva" value="activar" class="btn btn-blue">ACTIVA</button>
+            <button type="submit" name="accion_masiva" value="cortar" class="btn" style="background:var(--danger);">CORTA</button>
         </div>
     </div>
 
-    <div id="modalProrroga" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); align-items:center; justify-content:center;">
-        <div style="background:var(--card); max-width:400px; width:90%; padding:25px; border-radius:24px; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5);">
-            <div style="text-align:center; margin-bottom:20px;">
-                <div style="width:60px; height:60px; background:rgba(245, 158, 11, 0.1); color:var(--warning); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:24px; border:1px solid rgba(245, 158, 11, 0.3);">
-                    <i class="fas fa-clock-rotate-left"></i>
-                </div>
-                <h3 id="prorrogaUserTit" style="margin:0; color:#fff; font-weight:900; letter-spacing:1px; text-transform:uppercase; font-size:1.2rem;">PRÓRROGA</h3>
-                <p style="color:var(--text-dim); font-size:12px; margin-top:5px;">Establecer nuevo límite de navegación</p>
-            </div>
-            <div style="display:flex; flex-direction:column; gap:15px;">
-                <div>
-                    <label style="font-size:11px; color:var(--warning); font-weight:800; text-transform:uppercase; margin-left:5px;">Vence el:</label>
-                    <input type="datetime-local" id="fechaProrrogaInput" style="width:100%; padding:15px; background:#0f172a; border:1px solid var(--border); color:white; border-radius:15px; font-size:16px; outline:none; box-sizing:border-box;">
-                </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <button type="button" onclick="confirmarProrroga()" class="btn btn-orange" style="padding:15px; border-radius:15px; font-weight:800; background:var(--warning); color:#000;">ACTIVAR</button>
-                    <button type="button" onclick="cerrarProrroga()" style="padding:15px; background:none; border:none; color:var(--text-dim); font-weight:700;">CANCELAR</button>
-                </div>
-            </div>
-        </div>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-check" style="display:none; text-align:center;"><input type="checkbox" id="checkAll"></th>
+                    <th>CLIENTE / PAGO</th>
+                    <th style="text-align:center;">🛡️ ESCUDO</th> 
+                    <th style="text-align:center;">ESTADO / PING</th>
+                    <th style="text-align:right;">OPCIONES</th>
+                </tr>
+            </thead>
+            <tbody id="tablaBody">
+                <?php while($r = $clientes->fetch_assoc()): 
+                    $u = $r['user_mikrotik']; $online = isset($ips_online[$u]);
+                    $manual = ($r['proteccion_manual'] == 1);
+                    $auto = ($r['proteccion'] == 1 && !$manual);
+                    $tiene_prorroga = (!empty($r['prorroga_hasta']) && strtotime($r['prorroga_hasta']) > time());
+                    $esta_realmente_activo = ($r['estado'] == 'activo' || $tiene_prorroga);
+                ?>
+                <tr id="fila-<?php echo $u; ?>">
+                    <td class="col-check" style="display:none; text-align:center;"><input type="checkbox" name="usuarios_sel[]" value="<?php echo $u; ?>" class="user-check" onchange="actualizarBarra()"></td>
+                    <td>
+                        <b style="color:var(--primary); font-size:1rem; display:block;"><?php echo $u; ?></b>
+                        <small style="color:var(--text-dim)"><?php echo str_replace('PPPoeClientes-', '', $r['plan']); ?></small><br>
+                        <div style="font-size:11px; background: rgba(59, 130, 246, 0.05); color: var(--primary); padding: 3px 6px; border-radius: 4px; display: inline-block; border: 1px solid rgba(59, 130, 246, 0.1); margin-top: 4px;">
+                            Día <?php echo $r['dia_pago']; ?> @ <?php echo date("h:i A", strtotime($r['hora_corte'])); ?>
+                        </div>
+                    </td>
+
+                    <td style="text-align:center;">
+                        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;">
+                            <label class="shield-switch">
+                                <input type="checkbox" <?php echo ($manual) ? 'checked' : ''; ?> 
+                                       onclick="ejecutarAccionLive('config.php?accion=toggle_inmunidad&user=<?php echo $u; ?>', this)">
+                                <span class="shield-slider"></span>
+                            </label>
+                            <span id="shield-icon-<?php echo $u; ?>" style="height:16px;">
+                                <?php if($manual): ?>
+                                    <i class="fas fa-shield-alt shield-manual" title="Inmunidad Manual"></i>
+                                <?php elseif($auto): ?>
+                                    <i class="fas fa-shield-alt shield-auto" title="Inmunidad por Pago"></i>
+                                <?php endif; ?>
+                            </span>
+                        </div>
+                    </td>
+
+                    <td class="td-estado" style="text-align:center;">
+                        <div style="display:flex; align-items:center; justify-content:center; gap:8px;" 
+                             id="container-<?php echo $u; ?>" 
+                             data-prorroga="<?php echo $tiene_prorroga ? '1' : '0'; ?>">
+                            <?php if($esta_realmente_activo): ?>
+                                <i class="fas fa-toggle-on" onclick="ejecutarAccionLive('config.php?accion=cortar&user=<?php echo $u; ?>', this)" style="font-size:24px; color:var(--success); cursor:pointer;"></i>
+                            <?php else: ?>
+                                <i class="fas fa-toggle-off" onclick="ejecutarAccionLive('config.php?accion=activar_directo&user=<?php echo $u; ?>', this)" style="font-size:24px; color:var(--danger); cursor:pointer;"></i>
+                            <?php endif; ?>
+                            <span class="status-dot <?php echo ($online?'online':'offline'); ?>"></span>
+                        </div>
+                    </td>
+                    
+                    <td style="text-align:right;">
+                        <div class="options-dropdown">
+                            <button type="button" class="options-btn"><i class="fas fa-ellipsis-v"></i></button>
+                            <div class="options-content">
+                                <button type="button" onclick="solicitarProrroga('<?php echo $u; ?>')" style="color:var(--warning)">
+                                    <i class="fas fa-clock-rotate-left"></i> Dar Prórroga
+                                </button>
+                                <button type="button" onclick="abrirEdit('<?php echo $u; ?>', '<?php echo $r['dia_pago']; ?>', '<?php echo $r['hora_corte']; ?>')" style="color:var(--primary)">
+                                    <i class="fas fa-edit"></i> Editar Ficha
+                                </button>
+                                <a href="config.php?delete_user=<?php echo $u; ?>" onclick="return confirm('¿Eliminar a <?php echo $u; ?> permanentemente?')" style="color:var(--danger)">
+                                    <i class="fas fa-trash-alt"></i> Eliminar
+                                </a>
+                            </div>
+                        </div>
+
+                        <?php if($tiene_prorroga): ?>
+                            <br>
+                            <div class="escudo-rojo">
+                                <i class="fas fa-shield-virus"></i> PRÓRROGA: <?php echo date("d/m H:i", strtotime($r['prorroga_hasta'])); ?>
+                            </div>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
     </div>
+</form>
 
-    <script>
-        let usuarioProrrogaActual = "";
+<div id="modalEdit" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); align-items:center; justify-content:center;">
+    <div style="background:var(--card); max-width:400px; width:90%; padding:25px; border-radius:24px; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5);">
+        <div style="text-align:center; margin-bottom:20px;">
+            <div style="width:60px; height:60px; background:rgba(59, 130, 246, 0.1); color:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:24px; border:1px solid rgba(59, 130, 246, 0.3);">
+                <i class="fas fa-user-edit"></i>
+            </div>
+            <h3 id="userTit" style="margin:0; color:#fff; font-weight:900; letter-spacing:1px; text-transform:uppercase; font-size:1.2rem;"></h3>
+            <p style="color:var(--text-dim); font-size:12px; margin-top:5px;">Actualizar datos del abonado</p>
+        </div>
 
-        function ejecutarAccionLive(url, elemento) {
-            const fila = elemento.closest('tr');
-            fila.style.opacity = '0.3'; 
-            fetch(url + "&ajax=1").then(() => {
-                location.reload(); 
-            });
-        }
-
-        function monitorDeEstados() {
-            fetch('config.php?get_status_live=1')
-            .then(res => res.json())
-            .then(data => {
-                for (const user in data) {
-                    const container = document.getElementById('container-' + user);
-                    if (!container) continue;
-                    const info = data[user]; 
-                    const tieneProrroga = container.getAttribute('data-prorroga') === '1';
-                    const visualmenteActivo = (info.estado === 'activo' || tieneProrroga);
-                    const dot = container.querySelector('.status-dot');
-                    const dotClass = dot.classList.contains('online') ? 'online' : 'offline';
-
-                    if (visualmenteActivo) {
-                        container.innerHTML = `<i class="fas fa-toggle-on" onclick="ejecutarAccionLive('config.php?accion=cortar&user=${user}', this)" style="font-size:24px; color:var(--success); cursor:pointer;"></i><span class="status-dot ${dotClass}"></span>`;
-                    } else {
-                        container.innerHTML = `<i class="fas fa-toggle-off" onclick="ejecutarAccionLive('config.php?accion=activar_directo&user=${user}', this)" style="font-size:24px; color:var(--danger); cursor:pointer;"></i><span class="status-dot ${dotClass}"></span>`;
-                    }
-                }
-            });
-        }
-
-        setInterval(monitorDeEstados, 3000);
-
-        function abrirEdit(u, d, h) { 
-            const modal = document.getElementById('modalEdit');
-            modal.style.display = 'flex'; // Usamos Flex para centrar
-            document.getElementById('userTit').innerText = u; 
-            document.getElementById('userInp').value = u; 
-            document.getElementById('diaInp').value = d; 
-            document.getElementById('horaInp').value = h; 
-        }
-
-        function solicitarProrroga(usuario) {
-            usuarioProrrogaActual = usuario;
-            let hoy = new Date();
-            hoy.setDate(hoy.getDate() + 1);
-            hoy.setMinutes(hoy.getMinutes() - hoy.getTimezoneOffset());
-            let fechaSugerida = hoy.toISOString().slice(0, 16);
+        <form method="POST">
+            <input type="hidden" name="user_edit" id="userInp">
             
-            document.getElementById('fechaProrrogaInput').value = fechaSugerida;
-            document.getElementById('prorrogaUserTit').innerText = usuario;
-            document.getElementById('modalProrroga').style.display = 'flex'; // Usamos Flex para centrar
-        }
+            <div style="margin-bottom:15px;">
+                <label style="font-size:11px; color:var(--primary); font-weight:800; text-transform:uppercase; margin-left:5px;">Plan de Internet</label>
+                <select name="nuevo_plan" style="width:100%; padding:15px; margin-top:5px; background:#0f172a; border:1px solid var(--border); color:white; border-radius:15px; font-size:15px; outline:none; appearance:none;">
+                    <?php $p_res3 = $conn->query("SELECT * FROM planes"); while($p3 = $p_res3->fetch_assoc()) { echo "<option value='".$p3['perfil_mikrotik']."'>".$p3['nombre_visible']."</option>"; } ?>
+                </select>
+            </div>
 
-        function cerrarProrroga() {
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div>
+                    <label style="font-size:11px; color:var(--primary); font-weight:800; text-transform:uppercase; margin-left:5px;">Día de Pago</label>
+                    <input type="number" name="nuevo_dia" id="diaInp" style="width:100%; padding:15px; background:#0f172a; border:1px solid var(--border); color:white; border-radius:15px; outline:none; box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:11px; color:var(--primary); font-weight:800; text-transform:uppercase; margin-left:5px;">Hora Corte</label>
+                    <input type="time" name="nueva_hora" id="horaInp" style="width:100%; padding:15px; background:#0f172a; border:1px solid var(--border); color:white; border-radius:15px; outline:none; box-sizing:border-box;">
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-top:25px;">
+                <button type="submit" name="editar_cliente" class="btn btn-blue" style="padding:15px; border-radius:15px; font-weight:800; text-transform:uppercase; letter-spacing:1px;">GUARDAR CAMBIOS</button>
+                <button type="button" onclick="document.getElementById('modalEdit').style.display='none'" style="padding:10px; background:none; border:none; color:var(--text-dim); cursor:pointer; font-weight:700;">CANCELAR</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="modalProrroga" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); align-items:center; justify-content:center;">
+    <div style="background:var(--card); max-width:400px; width:90%; padding:25px; border-radius:24px; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5);">
+        <div style="text-align:center; margin-bottom:20px;">
+            <div style="width:60px; height:60px; background:rgba(245, 158, 11, 0.1); color:var(--warning); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:24px; border:1px solid rgba(245, 158, 11, 0.3);">
+                <i class="fas fa-clock-rotate-left"></i>
+            </div>
+            <h3 id="prorrogaUserTit" style="margin:0; color:#fff; font-weight:900; letter-spacing:1px; text-transform:uppercase; font-size:1.2rem;">PRÓRROGA</h3>
+            <p style="color:var(--text-dim); font-size:12px; margin-top:5px;">Establecer nuevo límite de navegación</p>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:15px;">
+            <div>
+                <label style="font-size:11px; color:var(--warning); font-weight:800; text-transform:uppercase; margin-left:5px;">Vence el:</label>
+                <input type="datetime-local" id="fechaProrrogaInput" style="width:100%; padding:15px; background:#0f172a; border:1px solid var(--border); color:white; border-radius:15px; font-size:16px; outline:none; box-sizing:border-box;">
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button type="button" onclick="confirmarProrroga()" class="btn btn-orange" style="padding:15px; border-radius:15px; font-weight:800; background:var(--warning); color:#000;">ACTIVAR</button>
+                <button type="button" onclick="cerrarProrroga()" style="padding:15px; background:none; border:none; color:var(--text-dim); font-weight:700;">CANCELAR</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let usuarioProrrogaActual = "";
+
+    function ejecutarAccionLive(url, elemento) {
+        const fila = elemento.closest('tr');
+        fila.style.opacity = '0.3'; 
+        fetch(url + "&ajax=1").then(() => {
+            location.reload(); 
+        });
+    }
+
+    function monitorDeEstados() {
+        fetch('config.php?get_status_live=1')
+        .then(res => res.json())
+        .then(data => {
+            for (const user in data) {
+                const container = document.getElementById('container-' + user);
+                if (!container) continue;
+                const info = data[user]; 
+                const tieneProrroga = container.getAttribute('data-prorroga') === '1';
+                const visualmenteActivo = (info.estado === 'activo' || tieneProrroga);
+                const dot = container.querySelector('.status-dot');
+                const dotClass = dot.classList.contains('online') ? 'online' : 'offline';
+
+                if (visualmenteActivo) {
+                    container.innerHTML = `<i class="fas fa-toggle-on" onclick="ejecutarAccionLive('config.php?accion=cortar&user=${user}', this)" style="font-size:24px; color:var(--success); cursor:pointer;"></i><span class="status-dot ${dotClass}"></span>`;
+                } else {
+                    container.innerHTML = `<i class="fas fa-toggle-off" onclick="ejecutarAccionLive('config.php?accion=activar_directo&user=${user}', this)" style="font-size:24px; color:var(--danger); cursor:pointer;"></i><span class="status-dot ${dotClass}"></span>`;
+                }
+            }
+        });
+    }
+
+    setInterval(monitorDeEstados, 3000);
+
+    function abrirEdit(u, d, h) { 
+        const modal = document.getElementById('modalEdit');
+        modal.style.display = 'flex'; 
+        document.getElementById('userTit').innerText = u; 
+        document.getElementById('userInp').value = u; 
+        document.getElementById('diaInp').value = d; 
+        document.getElementById('horaInp').value = h; 
+    }
+
+    function solicitarProrroga(usuario) {
+        usuarioProrrogaActual = usuario;
+        let hoy = new Date();
+        hoy.setDate(hoy.getDate() + 1);
+        hoy.setMinutes(hoy.getMinutes() - hoy.getTimezoneOffset());
+        let fechaSugerida = hoy.toISOString().slice(0, 16);
+        
+        document.getElementById('fechaProrrogaInput').value = fechaSugerida;
+        document.getElementById('prorrogaUserTit').innerText = usuario;
+        document.getElementById('modalProrroga').style.display = 'flex'; 
+    }
+
+    function cerrarProrroga() {
+        document.getElementById('modalProrroga').style.display = 'none';
+    }
+
+    function confirmarProrroga() {
+        let fecha = document.getElementById('fechaProrrogaInput').value;
+        if (fecha) {
+            let fechaFormateada = fecha.replace('T', ' ');
+            window.location.href = "config.php?accion=prorroga&user=" + usuarioProrrogaActual + "&fecha_limite=" + encodeURIComponent(fechaFormateada);
+        }
+    }
+
+    // ==========================================
+    // LÓGICA DEL MODO MASIVO (LIMPIA Y SIN DUPLICADOS)
+    // ==========================================
+
+    function activarModoMasivo() {
+        // 1. Mostrar columnas de checkboxes
+        document.querySelectorAll('.col-check').forEach(el => el.style.display = 'table-cell');
+        // 2. Mostrar la barra de abajo
+        document.getElementById('barraMasiva').style.display = 'block';
+        // 3. Ocultar el botón M de arriba
+        document.getElementById('btnM').style.display = 'none';
+        // 4. Actualizar contador
+        actualizarBarra();
+    }
+
+    function cancelarMasivo() {
+        // 1. Ocultar la barra de abajo
+        document.getElementById('barraMasiva').style.display = 'none';
+        // 2. Ocultar columnas de checkboxes
+        document.querySelectorAll('.col-check').forEach(el => el.style.display = 'none');
+        // 3. Desmarcar todos los checks para evitar accidentes
+        document.querySelectorAll('.user-check').forEach(check => check.checked = false);
+        document.getElementById('checkAll').checked = false;
+        // 4. Volver a mostrar el botón M
+        document.getElementById('btnM').style.display = 'inline-block';
+    }
+
+    function actualizarBarra() {
+        // Cuenta solo los que están marcados
+        let seleccionados = document.querySelectorAll('.user-check:checked').length;
+        document.getElementById('contador').innerText = seleccionados + " SELECCIONADOS";
+    }
+
+    // Checkbox de seleccionar todos
+    document.getElementById('checkAll').onclick = function() {
+        let checks = document.querySelectorAll('.user-check');
+        checks.forEach(c => {
+            // Solo marca los que no están ocultos por el buscador
+            if(c.closest('tr').style.display !== 'none') {
+                c.checked = this.checked;
+            }
+        });
+        actualizarBarra();
+    };
+
+    // ==========================================
+    // EXTRAS (BUSCADOR Y TECLADO)
+    // ==========================================
+
+    document.getElementById('busqueda').onkeyup = function() { 
+        let f = this.value.toLowerCase(); 
+        document.querySelectorAll('#tablaBody tr').forEach(tr => { 
+            tr.style.display = tr.innerText.toLowerCase().includes(f) ? '' : 'none'; 
+        }); 
+    };
+
+    // Cerrar el modo masivo o modales presionando Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === "Escape") {
+            cancelarMasivo();
+            document.getElementById('modalEdit').style.display = 'none';
             document.getElementById('modalProrroga').style.display = 'none';
         }
-
-        function confirmarProrroga() {
-            let fecha = document.getElementById('fechaProrrogaInput').value;
-            if (fecha) {
-                let fechaFormateada = fecha.replace('T', ' ');
-                window.location.href = "config.php?accion=prorroga&user=" + usuarioProrrogaActual + "&fecha_limite=" + encodeURIComponent(fechaFormateada);
-            }
-        }
-
-        function activarModoMasivo() {
-    // Muestra la columna de checkboxes
-    document.querySelectorAll('.col-check').forEach(el => {
-        el.style.display = 'table-cell';
     });
-    // Esconde el botón M para que no se duplique
-    document.getElementById('btnM').style.display = 'none';
-}
-
-function cancelarMasivo() {
-    // Esconde la barra azul de abajo
-    document.getElementById('barraMasiva').style.display = 'none';
-    // Esconde los cuadritos de la tabla
-    document.querySelectorAll('.col-check').forEach(el => {
-        el.style.display = 'none';
-    });
-    // Desmarca todos los checks para que no haya errores
-    document.querySelectorAll('.user-check').forEach(check => {
-        check.checked = false;
-    });
-    // Regresa el botón M
-    document.getElementById('btnM').style.display = 'inline-flex';
-}
-
-function actualizarBarra() {
-    let seleccionados = document.querySelectorAll('.user-check:checked').length;
-    let barra = document.getElementById('barraMasiva');
-    
-    if (seleccionados > 0) {
-        barra.style.display = 'block';
-        document.getElementById('contador').innerText = seleccionados + " SELECCIONADOS";
-    } else {
-        barra.style.display = 'none';
-    }
-}
-
-// Función para el checkbox "Seleccionar todos"
-document.getElementById('checkAll').onclick = function() {
-    let checks = document.querySelectorAll('.user-check');
-    checks.forEach(c => c.checked = this.checked);
-    actualizarBarra();
-};
-        
-        // Buscador y demás funciones se mantienen...
-        document.getElementById('busqueda').onkeyup = function() { 
-            let f = this.value.toLowerCase(); 
-            document.querySelectorAll('#tablaBody tr').forEach(tr => { 
-                tr.style.display = tr.innerText.toLowerCase().includes(f) ? '' : 'none'; 
-            }); 
-        };
-    </script>
+</script>
 </body>
 </html>
