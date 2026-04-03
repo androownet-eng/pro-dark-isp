@@ -157,6 +157,31 @@ if (isset($_POST['sincronizar_ahora'])) {
     exit;
 }
 
+// --- G. IMPORTAR DESDE MIKROTIK A BASE DE DATOS (Centralizado) ---
+if (isset($_POST['importar_desde_mt'])) {
+    // Usamos las variables globales $python y $dir del cerebro central
+    $comando = "\"$python\" \"$dir" . "get_secrets.py\"";
+    $json_extraido = shell_exec($comando . " 2>&1");
+    $lista_usuarios = json_decode($json_extraido, true);
+
+    if ($lista_usuarios && !isset($lista_usuarios['error'])) {
+        foreach ($lista_usuarios as $u_mt) {
+            $nombre = $conn->real_escape_string($u_mt['name']);
+            $plan = $conn->real_escape_string($u_mt['profile']);
+            
+            // Sincroniza: Si no existe lo crea, si existe actualiza el plan
+            $sql_import = "INSERT INTO abonados (user_mikrotik, plan, estado, dia_pago, hora_corte) 
+                           VALUES ('$nombre', '$plan', 'activo', 1, '08:00:00') 
+                           ON DUPLICATE KEY UPDATE plan = '$plan'";
+            $conn->query($sql_import);
+        }
+        header("Location: config.php?res=import_ok");
+        exit;
+    } else {
+        echo "<script>alert('Error de conexión con el RB4011');</script>";
+    }
+}
+
 // E. Acciones Masivas
 if (isset($_POST['accion_masiva']) && !empty($_POST['usuarios_sel'])) {
     $accion = $_POST['accion_masiva'];
@@ -364,9 +389,17 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
 
     <div class="action-bar">
         <input type="text" id="busqueda" placeholder="🔍 Buscar abonado..." style="padding:12px; border-radius:18px;">
+        
         <form method="POST" style="display:inline; margin:0;">
-            <button type="submit" name="sincronizar_ahora" class="btn btn-blue" style="padding:12px; border-radius:18px; width: 45px; height: 45px;"><i class="fas fa-sync"></i></button>
+            <button type="submit" name="sincronizar_ahora" class="btn btn-blue" title="Sincronizar Panel -> MikroTik" style="padding:12px; border-radius:18px; width: 45px; height: 45px;"><i class="fas fa-sync"></i></button>
         </form>
+
+        <form method="POST" style="display:inline; margin:0;">
+            <button type="submit" name="importar_desde_mt" class="btn btn-gray" title="Importar MikroTik -> Panel" style="padding:12px; border-radius:18px; width: 45px; height: 45px; border: 1px dashed var(--primary); color: var(--primary);">
+                <i class="fas fa-file-import"></i>
+            </button>
+        </form>
+
         <button type="button" onclick="activarModoMasivo()" id="btnM" class="btn btn-orange" style="padding:12px; border-radius:18px; width: 45px; height: 45px;"><b style="font-size:16px;">M</b></button>
     </div>
 
