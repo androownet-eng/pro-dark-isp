@@ -2,8 +2,6 @@
 // 1. IMPORTAR CEREBRO GLOBAL
 require_once "config_global.php"; 
 
-// IMPORTANTE: Mantenemos tu zona horaria para precisión con el MikroTik
-date_default_timezone_set('America/Caracas'); 
 
 $dia_actual = (int)date('j');
 $hoy = date('Y-m-d');

@@ -1,9 +1,11 @@
 <?php
-// --- 1. GESTIÓN DE SESIONES (EL MOTOR) ---
-// Esto debe ir ANTES de cualquier otra cosa. 
+// --- 1. GESTIÓN DE SESIONES Y RELOJ MAESTRO ---
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+// 🔴 RELOJ MAESTRO CENTRALIZADO PARA TODO EL PROYECTO
+date_default_timezone_set('America/Caracas');
 
 // --- 2. RUTAS DEL SISTEMA ---
 $python_path = "C:/Users/Androow/AppData/Local/Programs/Python/Python37/python.exe";
@@ -22,8 +24,11 @@ if ($conn->connect_error) {
     die("Error crítico de conexión: " . $conn->connect_error);
 }
 
-// Opcional: Configurar charset para evitar problemas con tildes o eñes
+// Configurar charset para evitar problemas con tildes o eñes
 $conn->set_charset("utf8mb4");
+
+// 🔴 OBLIGAMOS A MYSQL A USAR LA HORA DE VENEZUELA
+$conn->query("SET time_zone = '-04:00';");
 
 // --- 4. CONFIGURACIÓN DEL ROUTER MIKROTIK (CENTRALIZADO) ---
 $mikrotik_ip = "192.168.60.1"; 

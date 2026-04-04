@@ -37,10 +37,7 @@ if (isset($_POST['btn_modal_pago'])) {
     if ($conn->query($sql_pago)) {
         $conn->query("UPDATE abonados SET estado = 'activo', pagado_hasta = '$fecha_vencimiento', proteccion = 1 WHERE user_mikrotik = '$user'");
 
-        // BLINDAJE: Escapamos la variable
         $u_esc = escapeshellarg($user);
-        
-        // Ejecutamos de forma segura y mandamos acción 'activar' explícitamente
         shell_exec("\"$python_path\" \"{$base_dir}estado_cliente.py\" $u_esc \"activar\" 2>&1");
 
         header("Location: index.php?status=ok");
@@ -62,13 +59,19 @@ $planes_res = $conn->query("SELECT plan, COUNT(*) as cantidad FROM abonados GROU
 $planes_labels = [];
 $planes_data = [];
 while($p = $planes_res->fetch_assoc()){
-    // Prevenimos XSS en los labels de la gráfica
     $planes_labels[] = htmlspecialchars(str_replace('PPPoeClientes-', '', $p['plan']));
     $planes_data[] = $p['cantidad'];
 }
 
 // --- 6. PRÓXIMOS VENCIMIENTOS (Avisos Críticos) ---
 $vencimientos = $conn->query("SELECT user_mikrotik, pagado_hasta, plan FROM abonados WHERE estado = 'activo' AND pagado_hasta BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 3 DAY) ORDER BY pagado_hasta ASC LIMIT 5");
+
+// --- 7. DENSIDAD DE COBROS POR DÍA (NUEVO) ---
+$res_dias = $conn->query("SELECT dia_pago, COUNT(*) as cantidad FROM abonados GROUP BY dia_pago ORDER BY dia_pago ASC");
+$distribucion_dias = [];
+while($row = $res_dias->fetch_assoc()){
+    $distribucion_dias[] = $row;
+}
 ?>
 
 <!DOCTYPE html>
@@ -93,7 +96,7 @@ $vencimientos = $conn->query("SELECT user_mikrotik, pagado_hasta, plan FROM abon
         .logo-box { display: flex; align-items: center; gap: 10px; }
         .logo-box i { font-size: 1.5rem; color: var(--primary); }
         .logo-box h1 { font-size: 1.2rem; margin: 0; font-weight: 800; letter-spacing: -0.5px; }
-        .status-pill { background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+        .status-pill { background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
         .stat-card { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(10px); padding: 15px; border-radius: 20px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.03); transition: 0.3s; }
@@ -107,7 +110,6 @@ $vencimientos = $conn->query("SELECT user_mikrotik, pagado_hasta, plan FROM abon
         .bg-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); }
         .bg-gray { background: #1e293b; border: 1px solid var(--border); }
 
-        /* Nueva Cuadrícula del Dashboard */
         .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 25px; }
         @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
         
@@ -147,8 +149,14 @@ $vencimientos = $conn->query("SELECT user_mikrotik, pagado_hasta, plan FROM abon
             <i class="fas fa-satellite-dish"></i>
             <h1>PRO-DARK ISP</h1>
         </div>
-        <div class="status-pill" style="color: <?php echo $status_color; ?>;">
-            <i class="fas fa-circle <?php echo ($status_text=='Online'?'':'blink'); ?>"></i> <?php echo $status_text; ?>
+        
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+            <div class="status-pill" style="color: <?php echo $status_color; ?>; width: 100%;">
+                <i class="fas fa-circle <?php echo ($status_text=='Online'?'':'blink'); ?>"></i> <?php echo $status_text; ?>
+            </div>
+            <div id="reloj-digital" style="font-size: 0.65rem; color: var(--text-dim); font-weight: 800; letter-spacing: 0.5px;">
+                --:-- --
+            </div>
         </div>
     </div>
 
@@ -199,6 +207,24 @@ $vencimientos = $conn->query("SELECT user_mikrotik, pagado_hasta, plan FROM abon
                     <i class="fas fa-check-circle" style="font-size: 2rem; opacity: 0.3; margin-bottom: 10px; display: block;"></i>
                     Red estable.<br>No hay cortes próximos.
                 </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <div class="panel-box" style="margin-bottom: 25px;">
+        <div class="panel-title"><i class="fas fa-calendar-day" style="color: var(--primary);"></i> Mapa de Cobros por Día</div>
+        
+        <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: var(--primary) var(--bg-card);">
+            <?php if (!empty($distribucion_dias)): ?>
+                <?php foreach($distribucion_dias as $dd): ?>
+                <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); padding: 12px 20px; border-radius: 16px; text-align: center; min-width: 85px; flex-shrink: 0; transition: 0.3s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='rgba(59, 130, 246, 0.2)'">
+                    <span style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Día <?php echo $dd['dia_pago']; ?></span><br>
+                    <b style="font-size: 1.4rem; color: var(--text-main);"><?php echo $dd['cantidad']; ?></b><br>
+                    <small style="font-size: 0.6rem; color: var(--primary); font-weight: 700;">CLIENTES</small>
+                </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div style="color: var(--text-dim); font-size: 0.8rem; padding: 10px;">Aún no hay clientes registrados.</div>
             <?php endif; ?>
         </div>
     </div>
@@ -260,6 +286,21 @@ $vencimientos = $conn->query("SELECT user_mikrotik, pagado_hasta, plan FROM abon
     </div>
 
     <script>
+        // --- RELOJ EN TIEMPO REAL ---
+        function actualizarReloj() {
+            const fecha = new Date();
+            const opcionesFecha = { weekday: 'short', day: '2-digit', month: 'short' };
+            const opcionesHora = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            
+            const fechaStr = fecha.toLocaleDateString('es-VE', opcionesFecha);
+            const horaStr = fecha.toLocaleTimeString('es-VE', opcionesHora);
+            
+            document.getElementById('reloj-digital').innerHTML = `${fechaStr.toUpperCase()} <span style="color:var(--primary); margin-left:4px;">${horaStr}</span>`;
+        }
+        setInterval(actualizarReloj, 1000);
+        actualizarReloj();
+
+        // --- FUNCIONES DEL MODAL ---
         function abrirModal() { document.getElementById('modalPago').style.display = 'flex'; }
         function cerrarModal() { document.getElementById('modalPago').style.display = 'none'; }
         function cerrarModalExterno(e) { if(e.target.id === 'modalPago') cerrarModal(); }
@@ -267,17 +308,17 @@ $vencimientos = $conn->query("SELECT user_mikrotik, pagado_hasta, plan FROM abon
         // --- INICIALIZAR GRÁFICA ---
         const ctx = document.getElementById('planChart').getContext('2d');
         new Chart(ctx, {
-            type: 'bar', // Tipo de gráfica (barras horizontales lucen muy bien)
+            type: 'bar',
             data: {
                 labels: <?php echo json_encode($planes_labels); ?>,
                 datasets: [{
                     label: 'Clientes Activos',
                     data: <?php echo json_encode($planes_data); ?>,
                     backgroundColor: [
-                        'rgba(59, 130, 246, 0.8)', // Primary blue
-                        'rgba(16, 185, 129, 0.8)', // Success green
-                        'rgba(251, 191, 36, 0.8)', // Warning yellow
-                        'rgba(139, 92, 246, 0.8)'  // Purple
+                        'rgba(59, 130, 246, 0.8)', 
+                        'rgba(16, 185, 129, 0.8)', 
+                        'rgba(251, 191, 36, 0.8)', 
+                        'rgba(139, 92, 246, 0.8)'  
                     ],
                     borderColor: [
                         '#3b82f6', '#10b981', '#fbbf24', '#8b5cf6'
@@ -289,9 +330,9 @@ $vencimientos = $conn->query("SELECT user_mikrotik, pagado_hasta, plan FROM abon
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                indexAxis: 'y', // Hace las barras horizontales para que los nombres largos quepan mejor
+                indexAxis: 'y', 
                 plugins: {
-                    legend: { display: false } // Oculta la leyenda superior para ahorrar espacio
+                    legend: { display: false } 
                 },
                 scales: {
                     x: {
