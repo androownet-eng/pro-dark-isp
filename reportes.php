@@ -1,6 +1,12 @@
 <?php
-// --- 1. NÚCLEO ---
+// --- 1. NÚCLEO Y SEGURIDAD ---
 require_once "config_global.php";
+
+// EL PORTERO: Si no hay sesión iniciada, lo pateamos al login
+if (!isset($_SESSION['admin_auth'])) {
+    header("Location: login.php");
+    exit();
+}
 
 // --- 2. CÁLCULO DE CAJA DEL DÍA ---
 $hoy = date('Y-m-d');
@@ -143,7 +149,7 @@ $pagos_recientes = $conn->query("SELECT * FROM pagos ORDER BY fecha_pago DESC LI
                     if($p['metodo'] == 'Zelle') $clase_tag = 'tag-zelle';
                 ?>
                 <tr>
-                    <td style="font-weight: 700; color: var(--text-main);"><?php echo $p['user_mikrotik']; ?></td>
+                    <td style="font-weight: 700; color: var(--text-main);"><?php echo htmlspecialchars($p['user_mikrotik']); ?></td>
                     <td style="color: var(--success); font-weight: 800;">$<?php echo number_format($p['monto'], 2); ?></td>
                     <td><span class="metodo-tag <?php echo $clase_tag; ?>"><?php echo $p['metodo']; ?></span></td>
                     <td style="color: var(--text-dim);"><?php echo date("d/m/Y | H:i", strtotime($p['fecha_pago'])); ?></td>

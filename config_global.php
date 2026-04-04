@@ -1,7 +1,6 @@
 <?php
 // --- 1. GESTIÓN DE SESIONES (EL MOTOR) ---
 // Esto debe ir ANTES de cualquier otra cosa. 
-// Verifica si la sesión no ha empezado para evitar errores de "Session already started"
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -25,4 +24,7 @@ if ($conn->connect_error) {
 
 // Opcional: Configurar charset para evitar problemas con tildes o eñes
 $conn->set_charset("utf8mb4");
+
+// --- 4. CONFIGURACIÓN DEL ROUTER MIKROTIK (CENTRALIZADO) ---
+$mikrotik_ip = "192.168.60.1"; 
 ?>

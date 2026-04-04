@@ -29,10 +29,10 @@ if (isset($_GET['get_status_live'])) {
 }
 
 // 2. MONITOR LIVE (Puntos ON/OFF)
-$ips_json = shell_exec("\"$python\" \"$dir" . "obtener_ips.py\" 2>&1");
+$ips_json = shell_exec("\"$python\" \"{$dir}obtener_ips.py\" 2>&1");
 $ips_online = json_decode($ips_json, true) ?: [];
 
-// --- 3. PROCESAMIENTO DE ACCIONES (MOTOR UNIFICADO) ---
+// --- 3. PROCESAMIENTO DE ACCIONES (MOTOR UNIFICADO BLINDADO) ---
 
 // A. Acciones por GET (Botones rápidos de la tabla)
 if (isset($_GET['accion']) && isset($_GET['user'])) {
@@ -49,43 +49,29 @@ if (isset($_GET['accion']) && isset($_GET['user'])) {
         $conn->query("UPDATE abonados SET estado='activo' WHERE user_mikrotik='$u'");
     }
     elseif ($accion == 'prorroga') {
-        // 1. Capturamos y limpiamos el usuario y la fecha
         $u = $conn->real_escape_string($_GET['user']);
         $fecha_raw = isset($_GET['fecha_limite']) ? $_GET['fecha_limite'] : '';
-    
+
         if (!empty($fecha_raw)) {
-            // 2. Convertimos al formato que entiende MySQL (YYYY-MM-DD HH:MM:SS)
-            // strtotime es genial porque entiende casi cualquier formato que le mande el JS
             $timestamp = strtotime($fecha_raw);
-            
             if ($timestamp) {
                 $vencimiento = date("Y-m-d H:i:s", $timestamp);
-                
-                // 3. Actualizamos la DB: 
-                // Ponemos estado 'activo' para que el botón cambie a VERDE.
-                // Guardamos prorroga_hasta para que el Guardián vea el ESCUDO ROJO.
-                $sql = "UPDATE abonados SET 
-                        estado = 'activo', 
-                        prorroga_hasta = '$vencimiento' 
-                        WHERE user_mikrotik = '$u'";
-                
+                $sql = "UPDATE abonados SET estado = 'activo', prorroga_hasta = '$vencimiento' WHERE user_mikrotik = '$u'";
+
                 if ($conn->query($sql)) {
-                    // 4. Ejecutamos el script de Python con acción 'activar' 
-                    // Esto asegura que el cliente navegue YA, sin esperar al Guardián.
-                    shell_exec("\"$python\" \"$dir" . "estado_cliente.py\" \"$u\" \"activar\" 2>&1");
+                    // BLINDAJE
+                    $u_esc = escapeshellarg($u);
+                    shell_exec("\"$python\" \"{$dir}estado_cliente.py\" $u_esc \"activar\" 2>&1");
                 }
             }
         }
-    
-        // Respuesta para AJAX o redirección normal
         if (isset($_GET['ajax'])) exit;
         header("Location: config.php"); 
         exit;
     }
-
 }
 
-// B. Crear Usuario (CORREGIDO: Ahora envía la contraseña real a Python)
+// B. Crear Usuario (BLINDADO)
 if (isset($_POST['crear_usuario'])) {
     $u = $conn->real_escape_string($_POST['user']);
     $p_pass = $conn->real_escape_string($_POST['pass']); 
@@ -97,8 +83,12 @@ if (isset($_POST['crear_usuario'])) {
             VALUES ('$u', '$p_plan', $d, '$h', 'activo')";
 
     if ($conn->query($sql)) {
-        // Se envía a Python: usuario, acción, plan y la CONTRASEÑA nueva
-        $comando = "\"$python\" \"$dir" . "estado_cliente.py\" \"$u\" \"activar\" \"$p_plan\" \"$p_pass\"";
+        // BLINDAJE: Protegemos cada variable antes de enviarla a la terminal
+        $u_esc = escapeshellarg($u);
+        $plan_esc = escapeshellarg($p_plan);
+        $pass_esc = escapeshellarg($p_pass);
+
+        $comando = "\"$python\" \"{$dir}estado_cliente.py\" $u_esc \"activar\" $plan_esc $pass_esc";
         shell_exec($comando . " 2>&1");
 
         header("Location: config.php?res=creado"); 
@@ -108,49 +98,49 @@ if (isset($_POST['crear_usuario'])) {
     }
 }
 
-// F. Eliminar Cliente (AJUSTADO: Llama a Python antes de borrar de la DB)
+// F. Eliminar Cliente (BLINDADO)
 if (isset($_GET['delete_user'])) {
     $u = $conn->real_escape_string($_GET['delete_user']);
 
-    // 1. Mandamos la orden a Python para eliminar del MikroTik (RB4011)
-    $comando_del = "\"$python\" \"$dir" . "estado_cliente.py\" \"$u\" \"eliminar\" 2>&1";
+    // BLINDAJE
+    $u_esc = escapeshellarg($u);
+    $comando_del = "\"$python\" \"{$dir}estado_cliente.py\" $u_esc \"eliminar\" 2>&1";
     shell_exec($comando_del);
 
-    // 2. Ahora lo borramos de la base de datos
     $conn->query("DELETE FROM abonados WHERE user_mikrotik = '$u'");
-
     header("Location: config.php?res=eliminado");
     exit;
 }
 
-// C. Editar Cliente (El Modal)
+// C. Editar Cliente (BLINDADO)
 if (isset($_POST['editar_cliente'])) {
     $u = $conn->real_escape_string($_POST['user_edit']); 
     $n_plan = $conn->real_escape_string($_POST['nuevo_plan']); 
     $n_dia = (int)$_POST['nuevo_dia']; 
     $n_hora = $_POST['nueva_hora'];
-    
+
     $n_estado = ($n_dia >= (int)date('j')) ? 'activo' : 'cortado';
 
     $sql = "UPDATE abonados SET plan='$n_plan', dia_pago=$n_dia, hora_corte='$n_hora', estado='$n_estado' WHERE user_mikrotik='$u'";
-    
+
     if($conn->query($sql)){
         $accion_py = ($n_estado == 'activo') ? 'activar' : 'cortar';
-        shell_exec("\"$python\" \"{$dir}estado_cliente.py\" \"$u\" \"$accion_py\" 2>&1");
+        // BLINDAJE
+        $u_esc = escapeshellarg($u);
+        shell_exec("\"$python\" \"{$dir}estado_cliente.py\" $u_esc \"$accion_py\" 2>&1");
     }
     header("Location: config.php?res=editado"); exit;
 }
 
 // D. Sincronizar Ahora (AUTOMATIZADO)
 if (isset($_POST['sincronizar_ahora'])) {
-    // Usamos directamente las variables que vienen del cerebro global
     $py_exe = $python; 
     $py_script = $dir . "estado_cliente.py"; 
-    
+
     $res = $conn->query("SELECT user_mikrotik FROM abonados");
-    
+
     while ($row = $res->fetch_assoc()) {
-        $u = escapeshellarg($row['user_mikrotik']);
+        $u = escapeshellarg($row['user_mikrotik']); // Ya estaba blindado aquí
         shell_exec("\"$py_exe\" \"$py_script\" $u \"sync\" 2>&1");
     }
     header("Location: config.php?sync=ok");
@@ -159,8 +149,7 @@ if (isset($_POST['sincronizar_ahora'])) {
 
 // --- G. IMPORTAR DESDE MIKROTIK A BASE DE DATOS (Centralizado) ---
 if (isset($_POST['importar_desde_mt'])) {
-    // Usamos las variables globales $python y $dir del cerebro central
-    $comando = "\"$python\" \"$dir" . "get_secrets.py\"";
+    $comando = "\"$python\" \"{$dir}get_secrets.py\"";
     $json_extraido = shell_exec($comando . " 2>&1");
     $lista_usuarios = json_decode($json_extraido, true);
 
@@ -168,8 +157,7 @@ if (isset($_POST['importar_desde_mt'])) {
         foreach ($lista_usuarios as $u_mt) {
             $nombre = $conn->real_escape_string($u_mt['name']);
             $plan = $conn->real_escape_string($u_mt['profile']);
-            
-            // Sincroniza: Si no existe lo crea, si existe actualiza el plan
+
             $sql_import = "INSERT INTO abonados (user_mikrotik, plan, estado, dia_pago, hora_corte) 
                            VALUES ('$nombre', '$plan', 'activo', 1, '08:00:00') 
                            ON DUPLICATE KEY UPDATE plan = '$plan'";
@@ -182,22 +170,25 @@ if (isset($_POST['importar_desde_mt'])) {
     }
 }
 
-// E. Acciones Masivas
+// E. Acciones Masivas (BLINDADO)
 if (isset($_POST['accion_masiva']) && !empty($_POST['usuarios_sel'])) {
     $accion = $_POST['accion_masiva'];
     $n_plan = $_POST['plan_masivo'] ?? '';
 
     foreach ($_POST['usuarios_sel'] as $u) {
         $u = $conn->real_escape_string($u);
+        // BLINDAJE
+        $u_esc = escapeshellarg($u);
+
         if ($accion == 'cambiar_plan') {
             $conn->query("UPDATE abonados SET plan='$n_plan' WHERE user_mikrotik='$u'");
-            shell_exec("\"$python\" \"{$dir}estado_cliente.py\" \"$u\" \"activar\" 2>&1");
+            shell_exec("\"$python\" \"{$dir}estado_cliente.py\" $u_esc \"activar\" 2>&1");
         } elseif ($accion == 'activar') {
             $conn->query("UPDATE abonados SET estado='activo' WHERE user_mikrotik='$u'");
-            shell_exec("\"$python\" \"{$dir}estado_cliente.py\" \"$u\" \"activar\" 2>&1");
+            shell_exec("\"$python\" \"{$dir}estado_cliente.py\" $u_esc \"activar\" 2>&1");
         } elseif ($accion == 'cortar') {
             $conn->query("UPDATE abonados SET estado='cortado', proteccion=0, proteccion_manual=0 WHERE user_mikrotik='$u'");
-            shell_exec("\"$python\" \"{$dir}estado_cliente.py\" \"$u\" \"cortar\" 2>&1");
+            shell_exec("\"$python\" \"{$dir}estado_cliente.py\" $u_esc \"cortar\" 2>&1");
         }
     }
     header("Location: config.php?res=masivo"); exit;

@@ -2,8 +2,13 @@
 // --- 1. NÚCLEO Y SEGURIDAD ---
 require_once "config_global.php"; 
 
+// EL PORTERO: Si el usuario no está logueado, lo pateamos al login
+if (!isset($_SESSION['admin_auth'])) {
+    header("Location: login.php");
+    exit();
+}
+
 // --- 2. VERIFICACIÓN DE CONEXIÓN MIKROTIK ---
-$mikrotik_ip = "192.168.60.1"; 
 $fp = @fsockopen($mikrotik_ip, 8728, $errno, $errstr, 1);
 if ($fp) {
     $status_color = "var(--success)";
@@ -19,22 +24,25 @@ if (isset($_POST['btn_modal_pago'])) {
     $user   = $conn->real_escape_string($_POST['user_pago']);
     $monto  = (float)$_POST['monto'];
     $metodo = $conn->real_escape_string($_POST['metodo']);
-    
+
     $res_u = $conn->query("SELECT dia_pago FROM abonados WHERE user_mikrotik = '$user'");
     $data_u = $res_u->fetch_assoc();
     $dia_p_cliente = (int)($data_u['dia_pago'] ?? 1);
 
     $dia_f = str_pad($dia_p_cliente, 2, "0", STR_PAD_LEFT);
     $fecha_vencimiento = date('Y-m-', strtotime('+1 month')) . $dia_f;
-    
+
     $sql_pago = "INSERT INTO pagos (user_mikrotik, monto, metodo, fecha_pago) VALUES ('$user', $monto, '$metodo', NOW())";
-    
+
     if ($conn->query($sql_pago)) {
         $conn->query("UPDATE abonados SET estado = 'activo', pagado_hasta = '$fecha_vencimiento', proteccion = 1 WHERE user_mikrotik = '$user'");
+
+        // BLINDAJE: Escapamos la variable
+        $u_esc = escapeshellarg($user);
         
-        $cmd = "start /B \"\" \"$python_path\" \"{$base_dir}estado_cliente.py\" \"$user\" \"sync\"";
-        pclose(popen($cmd, "r"));
-        
+        // Ejecutamos de forma segura y mandamos acción 'activar' explícitamente
+        shell_exec("\"$python_path\" \"{$base_dir}estado_cliente.py\" $u_esc \"activar\" 2>&1");
+
         header("Location: index.php?status=ok");
         exit();
     }
@@ -54,12 +62,12 @@ $planes_res = $conn->query("SELECT plan, COUNT(*) as cantidad FROM abonados GROU
 $planes_labels = [];
 $planes_data = [];
 while($p = $planes_res->fetch_assoc()){
-    $planes_labels[] = str_replace('PPPoeClientes-', '', $p['plan']);
+    // Prevenimos XSS en los labels de la gráfica
+    $planes_labels[] = htmlspecialchars(str_replace('PPPoeClientes-', '', $p['plan']));
     $planes_data[] = $p['cantidad'];
 }
 
 // --- 6. PRÓXIMOS VENCIMIENTOS (Avisos Críticos) ---
-// Busca clientes que vencen en los próximos 3 días
 $vencimientos = $conn->query("SELECT user_mikrotik, pagado_hasta, plan FROM abonados WHERE estado = 'activo' AND pagado_hasta BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 3 DAY) ORDER BY pagado_hasta ASC LIMIT 5");
 ?>
 
@@ -182,7 +190,7 @@ $vencimientos = $conn->query("SELECT user_mikrotik, pagado_hasta, plan FROM abon
             <?php if ($vencimientos && $vencimientos->num_rows > 0): ?>
                 <?php while($v = $vencimientos->fetch_assoc()): ?>
                     <div class="vencimiento-item">
-                        <span style="font-weight: 600;"><?php echo $v['user_mikrotik']; ?></span>
+                        <span style="font-weight: 600;"><?php echo htmlspecialchars($v['user_mikrotik']); ?></span>
                         <span class="vencimiento-date"><?php echo date("d M", strtotime($v['pagado_hasta'])); ?></span>
                     </div>
                 <?php endwhile; ?>
@@ -206,7 +214,7 @@ $vencimientos = $conn->query("SELECT user_mikrotik, pagado_hasta, plan FROM abon
         <div class="client-item">
             <div>
                 <b style="display:flex; align-items:center; font-size:0.9rem;">
-                    <?php echo $c['user_mikrotik']; ?>
+                    <?php echo htmlspecialchars($c['user_mikrotik']); ?>
                     <?php if($es_manual): ?>
                         <i class="fas fa-shield-virus escudo escudo-manual" title="Protección Manual"></i>
                     <?php elseif($es_auto): ?>
