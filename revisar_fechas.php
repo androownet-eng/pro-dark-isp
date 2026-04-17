@@ -2,7 +2,6 @@
 // 1. IMPORTAR CEREBRO GLOBAL
 require_once "config_global.php"; 
 
-
 $dia_actual = (int)date('j');
 $hoy = date('Y-m-d');
 $hora_actual = date('H:i:s');
@@ -15,9 +14,12 @@ echo "   REVISION PRO-DARK ISP - MOTOR DE CORTE     \n";
 echo "   Fecha: $hoy | Hora: $hora_actual           \n";
 echo "==============================================\n";
 
-// 2. GESTIÓN DE PROTECCIÓN (Escudos)
-$conn->query("UPDATE abonados SET proteccion = 1 WHERE (pagado_hasta >= '$hoy' OR proteccion_manual = 1)");
-$conn->query("UPDATE abonados SET proteccion = 0 WHERE pagado_hasta < '$hoy' AND proteccion_manual = 0");
+// 2. GESTIÓN DE PROTECCIÓN (Escudos) - ¡CORREGIDO!
+// El escudo automático ahora solo se mantiene si pagaron para una fecha FUTURA.
+$conn->query("UPDATE abonados SET proteccion = 1 WHERE (pagado_hasta > '$hoy' OR proteccion_manual = 1)");
+
+// El escudo automático cae en el mismo instante en que el calendario marca su día de pago (o si ya pasó).
+$conn->query("UPDATE abonados SET proteccion = 0 WHERE pagado_hasta <= '$hoy' AND proteccion_manual = 0");
 
 // 3. PROCESAMIENTO DE ESTADOS (Añadimos prorroga_hasta a la consulta)
 $todos = $conn->query("SELECT user_mikrotik, plan, estado, dia_pago, proteccion, hora_corte, prorroga_hasta FROM abonados");
@@ -30,7 +32,7 @@ while ($r = $todos->fetch_assoc()) {
     $proteccion = (int)$r['proteccion'];
     $dia_pago = (int)$r['dia_pago'];
     $hora_corte = $r['hora_corte'];
-    
+
     // Verificamos si tiene una prórroga viva en este preciso momento
     $tiene_prorroga_valida = (!empty($r['prorroga_hasta']) && strtotime($r['prorroga_hasta']) > time());
 
@@ -54,7 +56,7 @@ while ($r = $todos->fetch_assoc()) {
     // CASO A: Vencimiento detectado (Ya no afectará a los que tienen prórroga)
     if ($debe_estar_cortado && $estado_db != 'cortado') {
         echo "[!] EVENTO: Vencimiento -> $u\n";
-        
+
         // Limpiamos la prórroga por si acaso acababa de expirar
         $conn->query("UPDATE abonados SET estado = 'cortado', prorroga_hasta = NULL WHERE user_mikrotik = '$u'");
 
