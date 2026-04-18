@@ -35,7 +35,8 @@ if (isset($_POST['btn_modal_pago'])) {
     $sql_pago = "INSERT INTO pagos (user_mikrotik, monto, metodo, fecha_pago) VALUES ('$user', $monto, '$metodo', NOW())";
 
     if ($conn->query($sql_pago)) {
-        $conn->query("UPDATE abonados SET estado = 'activo', pagado_hasta = '$fecha_vencimiento', proteccion = 1 WHERE user_mikrotik = '$user'");
+        // [!] AQUÍ ESTÁ EL CAMBIO: Se añadió prorroga_hasta = NULL para limpiar el cartelito al pagar
+        $conn->query("UPDATE abonados SET estado = 'activo', pagado_hasta = '$fecha_vencimiento', proteccion = 1, prorroga_hasta = NULL WHERE user_mikrotik = '$user'");
 
         $u_esc = escapeshellarg($user);
         shell_exec("\"$python_path\" \"{$base_dir}estado_cliente.py\" $u_esc \"activar\" 2>&1");
@@ -91,7 +92,7 @@ while($row = $res_dias->fetch_assoc()){
         }
         * { box-sizing: border-box; }
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 20px; line-height: 1.5; }
-        
+
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .logo-box { display: flex; align-items: center; gap: 10px; }
         .logo-box i { font-size: 1.5rem; color: var(--primary); }
@@ -103,7 +104,7 @@ while($row = $res_dias->fetch_assoc()){
         .stat-card:hover { transform: translateY(-5px); border-color: var(--primary); }
         .stat-card .value { font-size: 1.6rem; font-weight: 800; display: block; }
         .stat-card label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 1px; }
-        
+
         .menu-btns { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
         .btn-action { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px; border-radius: 16px; text-decoration: none; color: white; font-weight: 700; border: none; cursor: pointer; transition: 0.2s; }
         .btn-action:active { transform: scale(0.98); }
@@ -112,12 +113,12 @@ while($row = $res_dias->fetch_assoc()){
 
         .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 25px; }
         @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
-        
+
         .panel-box { background: var(--bg-card); border-radius: 24px; padding: 20px; border: 1px solid var(--border); }
         .panel-title { font-size: 0.75rem; font-weight: 800; color: var(--text-dim); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; }
-        
+
         .chart-container { position: relative; height: 220px; width: 100%; }
-        
+
         .vencimiento-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem; }
         .vencimiento-item:last-child { border-bottom: none; }
         .vencimiento-date { color: var(--warning); font-weight: 700; font-size: 0.75rem; background: rgba(251, 191, 36, 0.1); padding: 3px 8px; border-radius: 6px; }
@@ -127,7 +128,7 @@ while($row = $res_dias->fetch_assoc()){
         .badge { font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; }
         .badge.activo { background: rgba(16, 185, 129, 0.15); color: var(--success); }
         .badge.corte { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
-        
+
         .escudo { font-size: 0.8rem; margin-left: 6px; }
         .escudo-auto { color: var(--shield-auto); }
         .escudo-manual { color: var(--shield-manual); filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.3)); }
@@ -149,7 +150,7 @@ while($row = $res_dias->fetch_assoc()){
             <i class="fas fa-satellite-dish"></i>
             <h1>PRO-DARK ISP</h1>
         </div>
-        
+
         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
             <div class="status-pill" style="color: <?php echo $status_color; ?>; width: 100%;">
                 <i class="fas fa-circle <?php echo ($status_text=='Online'?'':'blink'); ?>"></i> <?php echo $status_text; ?>
@@ -213,7 +214,7 @@ while($row = $res_dias->fetch_assoc()){
 
     <div class="panel-box" style="margin-bottom: 25px;">
         <div class="panel-title"><i class="fas fa-calendar-day" style="color: var(--primary);"></i> Mapa de Cobros por Día</div>
-        
+
         <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: var(--primary) var(--bg-card);">
             <?php if (!empty($distribucion_dias)): ?>
                 <?php foreach($distribucion_dias as $dd): ?>
@@ -291,10 +292,10 @@ while($row = $res_dias->fetch_assoc()){
             const fecha = new Date();
             const opcionesFecha = { weekday: 'short', day: '2-digit', month: 'short' };
             const opcionesHora = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
-            
+
             const fechaStr = fecha.toLocaleDateString('es-VE', opcionesFecha);
             const horaStr = fecha.toLocaleTimeString('es-VE', opcionesHora);
-            
+
             document.getElementById('reloj-digital').innerHTML = `${fechaStr.toUpperCase()} <span style="color:var(--primary); margin-left:4px;">${horaStr}</span>`;
         }
         setInterval(actualizarReloj, 1000);
