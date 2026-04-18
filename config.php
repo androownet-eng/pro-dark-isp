@@ -13,22 +13,27 @@ if (!isset($_SESSION['admin_auth'])) {
 // 1. IMPORTAR CONFIGURACIÓN CENTRALIZADA
 require_once "config_global.php";
 
-
 $python = $python_path; 
 $dir = $base_dir;       
 
 $dia_actual = date('j');
 $mes_actual_inicio = date('Y-m-01'); 
 
+// --- MEJORA: CONTEO EN LÍNEA EN TIEMPO REAL ---
+$fp = @fsockopen($mikrotik_ip, 8728, $errno, $errstr, 1);
+$conectados_reales = 0; 
+if ($fp) {
+    fclose($fp);
+    $cmd_online = "\"$python\" \"{$dir}estado_cliente.py\" \"global\" \"contar\"";
+    $conectados_reales = (int)shell_exec($cmd_online . " 2>&1");
+}
+
 // --- MEJORA: ENDPOINT PARA CONSULTA LIVE ---
 if (isset($_GET['get_status_live'])) {
-    
     $ahora_str = date('Y-m-d H:i:s');
-    
     $res = $conn->query("SELECT user_mikrotik, estado, proteccion, proteccion_manual, prorroga_hasta FROM abonados");
     $data = [];
     while($row = $res->fetch_assoc()) { 
-        // 🔴 Evaluar la prórroga en el servidor en tiempo real
         $row['tiene_prorroga'] = (!empty($row['prorroga_hasta']) && $row['prorroga_hasta'] > $ahora_str);
         $data[$row['user_mikrotik']] = $row; 
     }
@@ -48,7 +53,6 @@ if (isset($_GET['accion']) && isset($_GET['user'])) {
     $u = $conn->real_escape_string($_GET['user']);
     $accion = $_GET['accion'];
 
-    // EL ESCUDO MANUAL
     if ($accion == 'toggle_inmunidad') {
         $conn->query("UPDATE abonados SET proteccion_manual = NOT proteccion_manual WHERE user_mikrotik='$u'");
     } 
@@ -58,7 +62,6 @@ if (isset($_GET['accion']) && isset($_GET['user'])) {
     elseif ($accion == 'activar_directo') {
         $conn->query("UPDATE abonados SET estado='activo' WHERE user_mikrotik='$u'");
     }
-    // LA PRÓRROGA CON HORAS EXACTAS
     elseif ($accion == 'prorroga') {
         $u_esc = escapeshellarg($u); 
         $fecha_raw = isset($_GET['fecha_limite']) ? $_GET['fecha_limite'] : '';
@@ -106,7 +109,6 @@ if (isset($_POST['crear_usuario'])) {
 // F. Eliminar Cliente
 if (isset($_GET['delete_user'])) {
     $u = $conn->real_escape_string($_GET['delete_user']);
-
     $u_esc = escapeshellarg($u);
     $comando_del = "\"$python\" \"{$dir}estado_cliente.py\" $u_esc \"eliminar\" 2>&1";
     shell_exec($comando_del);
@@ -150,27 +152,33 @@ if (isset($_POST['sincronizar_ahora'])) {
     exit;
 }
 
-// --- G. IMPORTAR DESDE MIKROTIK A BASE DE DATOS ---
-if (isset($_POST['importar_desde_mt'])) {
+// --- G. IMPORTAR DESDE MIKROTIK A BASE DE DATOS (NUEVO MODAL SELECTIVO) ---
+$mt_pendientes = [];
+if (isset($_POST['fetch_mt_list'])) {
     $comando = "\"$python\" \"{$dir}get_secrets.py\"";
     $json_extraido = shell_exec($comando . " 2>&1");
-    $lista_usuarios = json_decode($json_extraido, true);
+    $lista_cruda = json_decode($json_extraido, true);
 
-    if ($lista_usuarios && !isset($lista_usuarios['error'])) {
-        foreach ($lista_usuarios as $u_mt) {
-            $nombre = $conn->real_escape_string($u_mt['name']);
-            $plan = $conn->real_escape_string($u_mt['profile']);
-
-            $sql_import = "INSERT INTO abonados (user_mikrotik, plan, estado, dia_pago, hora_corte) 
-                           VALUES ('$nombre', '$plan', 'activo', 1, '08:00:00') 
-                           ON DUPLICATE KEY UPDATE plan = '$plan'";
-            $conn->query($sql_import);
-        }
-        header("Location: config.php?res=import_ok");
-        exit;
+    if ($lista_cruda && !isset($lista_cruda['error'])) {
+        $mt_pendientes = $lista_cruda;
     } else {
-        echo "<script>alert('Error de conexión con el RB4011');</script>";
+        echo "<script>alert('Error: No se pudo conectar con el MikroTik');</script>";
     }
+}
+
+if (isset($_POST['importar_seleccionados']) && !empty($_POST['usuarios_mt'])) {
+    foreach ($_POST['usuarios_mt'] as $json_user) {
+        $u_mt = json_decode($json_user, true);
+        $nombre = $conn->real_escape_string($u_mt['name']);
+        $plan = $conn->real_escape_string($u_mt['profile']);
+
+        $sql_import = "INSERT INTO abonados (user_mikrotik, plan, estado, dia_pago, hora_corte) 
+                       VALUES ('$nombre', '$plan', 'activo', 1, '08:00:00') 
+                       ON DUPLICATE KEY UPDATE plan = '$plan'";
+        $conn->query($sql_import);
+    }
+    header("Location: config.php?res=import_ok");
+    exit;
 }
 
 // E. Acciones Masivas
@@ -225,7 +233,8 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
 
     .card { background: var(--card); border-radius: 16px; padding: 15px; box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4); margin-bottom: 10px; border: 1px solid var(--border); transition: transform 0.3s; }
 
-    .stats-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+    /* ¡ACTUALIZADO A 4 COLUMNAS! */
+    .stats-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
 
     .table-responsive { overflow-x: hidden; -webkit-overflow-scrolling: touch; border-radius: 16px; background: var(--card); border: 1px solid var(--border); }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -264,7 +273,6 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
     input:checked + .shield-slider { background-color: var(--warning); }
     input:checked + .shield-slider:before { transform: translateX(16px); }
 
-    /* ESTILOS DE LOS ESCUDOS */
     .shield-manual { color: var(--warning) !important; filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.8)); animation: pulse-gold 2s infinite; font-size: 14px; }
     .shield-auto { color: var(--primary) !important; filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.5)); font-size: 14px; }
 
@@ -290,7 +298,7 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
     .options-dropdown:hover .options-content { display: block; }
 
     @media (max-width: 600px) {
-        .stats-container { gap: 5px; }
+        .stats-container { gap: 5px; grid-template-columns: repeat(2, 1fr); }
         .stats-container .card { padding: 10px; }
         .stats-container b { font-size: 1.3rem !important; }
         .action-bar button { flex-grow: 1; }
@@ -327,6 +335,12 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
                 <?php echo $conn->query("SELECT id FROM abonados WHERE dia_pago=$dia_actual AND estado != 'activo'")->num_rows; ?>
             </b>
         </div>
+        <div class="card" style="text-align:center; border-top: 3px solid #00bcd4;">
+            <small style="font-size:9px; color:var(--text-dim); text-transform:uppercase;">En Línea</small><br>
+            <b style="color:#00bcd4; font-size:1.6rem; font-weight:900;">
+                <?php echo $conectados_reales; ?>
+            </b>
+        </div>
     </div>
 
     <details class="card" style="margin-bottom: 15px; padding:0;">
@@ -352,7 +366,7 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
             <button type="submit" name="sincronizar_ahora" class="btn btn-blue" title="Sincronizar Panel -> MikroTik" style="padding:12px; border-radius:18px; width: 45px; height: 45px;"><i class="fas fa-sync"></i></button>
         </form>
         <form method="POST" style="display:inline; margin:0;">
-            <button type="submit" name="importar_desde_mt" class="btn btn-gray" title="Importar MikroTik -> Panel" style="padding:12px; border-radius:18px; width: 45px; height: 45px; border: 1px dashed var(--primary); color: var(--primary);">
+            <button type="submit" name="fetch_mt_list" class="btn btn-gray" title="Importar MikroTik -> Panel" style="padding:12px; border-radius:18px; width: 45px; height: 45px; border: 1px dashed var(--primary); color: var(--primary);">
                 <i class="fas fa-file-import"></i>
             </button>
         </form>
@@ -390,15 +404,13 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
             <tbody id="tablaBody">
                 <?php while($r = $clientes->fetch_assoc()): 
                     $u = $r['user_mikrotik']; $online = isset($ips_online[$u]);
-                    
-                    // VARIABLES DE ESCUDOS CORREGIDAS
+
                     $manual = ($r['proteccion_manual'] == 1);
                     $auto = ($r['proteccion'] == 1 && !$manual); 
-                    
-                    // 🔴 CORRECCIÓN INFALIBLE DE LA PRÓRROGA
+
                     $ahora_mismo = date('Y-m-d H:i:s');
                     $tiene_prorroga = (!empty($r['prorroga_hasta']) && $r['prorroga_hasta'] > $ahora_mismo);
-                    
+
                     $esta_realmente_activo = ($r['estado'] == 'activo' || $tiene_prorroga);
                 ?>
                 <tr id="fila-<?php echo htmlspecialchars($u); ?>">
@@ -534,6 +546,53 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
     </div>
 </div>
 
+<?php if (!empty($mt_pendientes)): ?>
+<div id="modalImportMT" style="display:flex; position:fixed; z-index:10000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.9); backdrop-filter:blur(10px); align-items:center; justify-content:center;">
+    <div style="background:var(--card); max-width:500px; width:95%; max-height:80vh; overflow-y:auto; padding:25px; border-radius:24px; border:1px solid var(--primary); box-shadow:0 0 30px rgba(59, 130, 246, 0.2);">
+        <div style="text-align:center; margin-bottom:20px;">
+            <i class="fas fa-network-wired" style="font-size:30px; color:var(--primary);"></i>
+            <h3 style="margin:10px 0 0 0; color:#fff;">SELECCIONAR CLIENTES</h3>
+            <p style="color:var(--text-dim); font-size:12px;">Se encontraron <?php echo count($mt_pendientes); ?> perfiles en MikroTik</p>
+        </div>
+
+        <form method="POST">
+            <div style="margin-bottom:15px; border: 1px solid var(--border); border-radius:15px; overflow:hidden;">
+                <table style="width:100%; background: rgba(0,0,0,0.2);">
+                    <thead style="background:rgba(59, 130, 246, 0.1);">
+                        <tr>
+                            <th style="width:40px; text-align:center; padding:10px;"><input type="checkbox" id="checkAllMT" onclick="toggleAllMT(this)"></th>
+                            <th style="padding:10px; font-size:10px;">USUARIO MIKROTIK</th>
+                            <th style="padding:10px; font-size:10px;">PERFIL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($mt_pendientes as $u): ?>
+                        <tr>
+                            <td style="text-align:center; padding:8px; border-top: 1px solid var(--border);">
+                                <input type="checkbox" name="usuarios_mt[]" class="mt-check" value='<?php echo json_encode($u); ?>'>
+                            </td>
+                            <td style="padding:8px; border-top: 1px solid var(--border); font-size:13px; color:#fff;"><?php echo htmlspecialchars($u['name']); ?></td>
+                            <td style="padding:8px; border-top: 1px solid var(--border); font-size:11px; color:var(--text-dim);"><?php echo htmlspecialchars($u['profile']); ?></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button type="submit" name="importar_seleccionados" class="btn btn-blue" style="border-radius:15px; padding:15px;">IMPORTAR MARCADOS</button>
+                <button type="button" onclick="window.location.href='config.php'" class="btn btn-gray" style="border-radius:15px;">CANCELAR</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    function toggleAllMT(source) {
+        document.querySelectorAll('.mt-check').forEach(c => c.checked = source.checked);
+    }
+</script>
+<?php endif; ?>
+
 <script>
     let usuarioProrrogaActual = "";
 
@@ -553,10 +612,8 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
                 const container = document.getElementById('container-' + user);
                 if (!container) continue;
                 const info = data[user]; 
-                
-                // 🔴 USAMOS EL DATO VERÍDICO DEL SERVIDOR PARA LA PRÓRROGA
+
                 const tieneProrroga = info.tiene_prorroga;
-                
                 const visualmenteActivo = (info.estado === 'activo' || tieneProrroga);
                 const dot = container.querySelector('.status-dot');
                 const dotClass = dot.classList.contains('online') ? 'online' : 'offline';
@@ -605,9 +662,6 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
         }
     }
 
-    // ==========================================
-    // LÓGICA DEL MODO MASIVO
-    // ==========================================
     function activarModoMasivo() {
         document.querySelectorAll('.col-check').forEach(el => el.style.display = 'table-cell');
         document.getElementById('barraMasiva').style.display = 'block';
@@ -638,9 +692,6 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
         actualizarBarra();
     };
 
-    // ==========================================
-    // EXTRAS
-    // ==========================================
     document.getElementById('busqueda').onkeyup = function() { 
         let f = this.value.toLowerCase(); 
         document.querySelectorAll('#tablaBody tr').forEach(tr => { 

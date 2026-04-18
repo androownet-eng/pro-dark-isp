@@ -5,7 +5,6 @@ from datetime import datetime
 import config_mk as cfg  # <--- IMPORTAMOS TU CEREBRO CONFIG_MK
 
 def conectar_db():
-    # Ahora usamos las variables globales de cfg
     return mysql.connector.connect(
         host=cfg.DB_HOST, 
         user=cfg.DB_USER, 
@@ -15,17 +14,14 @@ def conectar_db():
 
 def procesar():
     if len(sys.argv) < 2: return
-    
+
     user_target = sys.argv[1]
     accion = sys.argv[2].lower() if len(sys.argv) > 2 else 'sync'
     plan_manual = sys.argv[3] if len(sys.argv) > 3 else None
     pass_manual = sys.argv[4] if len(sys.argv) > 4 else None
 
     try:
-        db = conectar_db()
-        cursor = db.cursor(dictionary=True)
-        
-        # Usamos los datos de MikroTik del cerebro cfg
+        # Nos conectamos al MikroTik usando el cerebro cfg
         connection = routeros_api.RouterOsApiPool(
             cfg.HOST, 
             username=cfg.USER, 
@@ -33,6 +29,15 @@ def procesar():
             plaintext_login=True
         )
         api = connection.get_api()
+
+        # --- NUEVA ACCIÓN: CONTAR CONECTADOS ---
+        if accion == 'contar':
+            res_active = api.get_resource('/ppp/active')
+            conexiones = res_active.get()
+            print(len(conexiones))
+            connection.disconnect()
+            return  # Salimos rápido, no hace falta tocar MySQL
+
         res_ppp = api.get_resource('/ppp/secret')
         res_active = api.get_resource('/ppp/active')
 
@@ -47,27 +52,30 @@ def procesar():
                         res_active.remove(id=s['id'])
                     except:
                         pass
+            connection.disconnect()
             return
 
         # 2. LECTURA DE LA BASE DE DATOS
+        db = conectar_db()
+        cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT plan, estado, prorroga_hasta, proteccion, proteccion_manual FROM abonados WHERE user_mikrotik = %s", (user_target,))
         cliente = cursor.fetchone()
-        if not cliente: return
+        
+        if not cliente: 
+            db.close()
+            connection.disconnect()
+            return
 
         # --- LÓGICA DE DECISIÓN ---
         perfil_objetivo = plan_manual if plan_manual else cliente['plan']
         ahora = datetime.now()
 
-        # ¿Tiene prórroga activa?
         tiene_prorroga = cliente['prorroga_hasta'] and cliente['prorroga_hasta'] > ahora
-        # ¿Tiene escudo activo?
         tiene_escudo = (cliente['proteccion'] == 1 or cliente['proteccion_manual'] == 1)
 
-        # Aplicamos el perfil CORTE solo si no hay excepciones
         if accion == 'cortar':
             perfil_objetivo = 'CORTE'
         elif cliente['estado'] == 'cortado':
-            # Solo cortamos si NO tiene prórroga Y NO tiene escudo
             if not tiene_prorroga and not tiene_escudo:
                 perfil_objetivo = 'CORTE'
 
@@ -75,21 +83,19 @@ def procesar():
         m_user = res_ppp.get(name=user_target)
         if m_user:
             uid = m_user[0]['id']
-            # Verificamos si hay que actualizar perfil o contraseña
             cambio_necesario = False
-            
+
             params = {}
             if m_user[0]['profile'] != perfil_objetivo:
                 params['profile'] = perfil_objetivo
                 cambio_necesario = True
-            
+
             if pass_manual and m_user[0]['password'] != pass_manual:
                 params['password'] = pass_manual
                 cambio_necesario = True
-            
+
             if cambio_necesario:
                 res_ppp.set(id=uid, **params)
-                # Desconectar para aplicar cambio
                 sesion = res_active.get(name=user_target)
                 for s in sesion: 
                     try:
@@ -97,7 +103,6 @@ def procesar():
                     except:
                         pass
         else:
-            # Si no existe, lo creamos (excepto si la orden es cortar a alguien inexistente)
             if perfil_objetivo != 'CORTE':
                 clave = pass_manual if pass_manual else user_target
                 res_ppp.add(name=user_target, password=clave, profile=perfil_objetivo, service='pppoe')

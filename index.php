@@ -8,12 +8,18 @@ if (!isset($_SESSION['admin_auth'])) {
     exit();
 }
 
-// --- 2. VERIFICACIÓN DE CONEXIÓN MIKROTIK ---
+// --- 2. VERIFICACIÓN DE CONEXIÓN MIKROTIK Y CONTEO EN LÍNEA ---
 $fp = @fsockopen($mikrotik_ip, 8728, $errno, $errstr, 1);
+$conectados_reales = 0; // Valor por defecto si el MikroTik está apagado
+
 if ($fp) {
     $status_color = "var(--success)";
     $status_text = "Online";
     fclose($fp);
+    
+    // Llamamos al Python centralizado con la acción "contar" (pasamos "global" como usuario fantasma)
+    $cmd_online = "\"$python_path\" \"{$base_dir}estado_cliente.py\" \"global\" \"contar\"";
+    $conectados_reales = (int)shell_exec($cmd_online . " 2>&1");
 } else {
     $status_color = "var(--danger)";
     $status_text = "Offline";
@@ -99,7 +105,7 @@ while($row = $res_dias->fetch_assoc()){
         .logo-box h1 { font-size: 1.2rem; margin: 0; font-weight: 800; letter-spacing: -0.5px; }
         .status-pill { background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
         .stat-card { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(10px); padding: 15px; border-radius: 20px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.03); transition: 0.3s; }
         .stat-card:hover { transform: translateY(-5px); border-color: var(--primary); }
         .stat-card .value { font-size: 1.6rem; font-weight: 800; display: block; }
@@ -173,6 +179,10 @@ while($row = $res_dias->fetch_assoc()){
         <div class="stat-card" style="color: var(--danger);">
             <label>Cortes</label>
             <span class="value"><?php echo $stats['cortes'] ?? 0; ?></span>
+        </div>
+        <div class="stat-card" style="color: #00bcd4; border-color: rgba(0, 188, 212, 0.3);">
+            <label><i class="fas fa-wifi" style="margin-right: 4px;"></i>En Línea</label>
+            <span class="value"><?php echo $conectados_reales; ?></span>
         </div>
     </div>
 
