@@ -48,7 +48,6 @@ $ips_online = json_decode($ips_json, true) ?: [];
 
 // --- 3. PROCESAMIENTO DE ACCIONES (MOTOR UNIFICADO BLINDADO) ---
 
-// A. Acciones por GET (Botones rápidos de la tabla)
 if (isset($_GET['accion']) && isset($_GET['user'])) {
     $u = $conn->real_escape_string($_GET['user']);
     $accion = $_GET['accion'];
@@ -80,16 +79,20 @@ if (isset($_GET['accion']) && isset($_GET['user'])) {
     }
 }
 
-// B. Crear Usuario
 if (isset($_POST['crear_usuario'])) {
-    $u = $conn->real_escape_string($_POST['user']);
-    $p_pass = $conn->real_escape_string($_POST['pass']); 
+    $u = $conn->real_escape_string(trim($_POST['user']));
+    $p_pass = $conn->real_escape_string(trim($_POST['pass'])); 
     $p_plan = $conn->real_escape_string($_POST['plan']);
     $d = (int)$_POST['dia_pago'];
     $h = $_POST['hora_corte'];
+    
+    if (strlen($h) == 5) { $h .= ':00'; }
 
-    $sql = "INSERT INTO abonados (user_mikrotik, plan, dia_pago, hora_corte, estado) 
-            VALUES ('$u', '$p_plan', $d, '$h', 'activo')";
+    $dia_f = str_pad($d, 2, "0", STR_PAD_LEFT);
+    $fecha_vencimiento = date('Y-m-', strtotime('+1 month')) . $dia_f;
+
+    $sql = "INSERT INTO abonados (user_mikrotik, plan, dia_pago, hora_corte, estado, proteccion, proteccion_manual, pagado_hasta) 
+            VALUES ('$u', '$p_plan', $d, '$h', 'activo', 1, 0, '$fecha_vencimiento')";
 
     if ($conn->query($sql)) {
         $u_esc = escapeshellarg($u);
@@ -102,23 +105,20 @@ if (isset($_POST['crear_usuario'])) {
         header("Location: config.php?res=creado"); 
         exit;
     } else {
-        echo "Error: " . $conn->error;
+        $error_bd = $conn->real_escape_string($conn->error);
+        echo "<script>alert('Error al registrar abonado: $error_bd');</script>";
     }
 }
 
-// F. Eliminar Cliente
 if (isset($_GET['delete_user'])) {
     $u = $conn->real_escape_string($_GET['delete_user']);
     $u_esc = escapeshellarg($u);
-    $comando_del = "\"$python\" \"{$dir}estado_cliente.py\" $u_esc \"eliminar\" 2>&1";
-    shell_exec($comando_del);
-
+    shell_exec("\"$python\" \"{$dir}estado_cliente.py\" $u_esc \"eliminar\" 2>&1");
     $conn->query("DELETE FROM abonados WHERE user_mikrotik = '$u'");
     header("Location: config.php?res=eliminado");
     exit;
 }
 
-// C. Editar Cliente
 if (isset($_POST['editar_cliente'])) {
     $u = $conn->real_escape_string($_POST['user_edit']); 
     $n_plan = $conn->real_escape_string($_POST['nuevo_plan']); 
@@ -137,13 +137,11 @@ if (isset($_POST['editar_cliente'])) {
     header("Location: config.php?res=editado"); exit;
 }
 
-// D. Sincronizar Ahora
 if (isset($_POST['sincronizar_ahora'])) {
     $py_exe = $python; 
     $py_script = $dir . "estado_cliente.py"; 
 
     $res = $conn->query("SELECT user_mikrotik FROM abonados");
-
     while ($row = $res->fetch_assoc()) {
         $u = escapeshellarg($row['user_mikrotik']); 
         shell_exec("\"$py_exe\" \"$py_script\" $u \"sync\" 2>&1");
@@ -152,7 +150,6 @@ if (isset($_POST['sincronizar_ahora'])) {
     exit;
 }
 
-// --- G. IMPORTAR DESDE MIKROTIK A BASE DE DATOS (NUEVO MODAL SELECTIVO) ---
 $mt_pendientes = [];
 if (isset($_POST['fetch_mt_list'])) {
     $comando = "\"$python\" \"{$dir}get_secrets.py\"";
@@ -181,7 +178,6 @@ if (isset($_POST['importar_seleccionados']) && !empty($_POST['usuarios_mt'])) {
     exit;
 }
 
-// E. Acciones Masivas
 if (isset($_POST['accion_masiva']) && !empty($_POST['usuarios_sel'])) {
     $accion = $_POST['accion_masiva'];
     $n_plan = $_POST['plan_masivo'] ?? '';
@@ -231,9 +227,10 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
     .btn-orange { background: rgba(245, 158, 11, 0.1); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
     .btn-orange:hover { background: var(--warning); color: #000; }
 
-    .card { background: var(--card); border-radius: 16px; padding: 15px; box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4); margin-bottom: 10px; border: 1px solid var(--border); transition: transform 0.3s; }
+    .card { background: var(--card); border-radius: 16px; padding: 15px; box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4); margin-bottom: 10px; border: 1px solid var(--border); transition: transform 0.2s, border-color 0.2s; }
+    .card.clickable:hover { transform: translateY(-3px); filter: brightness(1.2); }
+    .card.clickable:active { transform: scale(0.95); }
 
-    /* ¡ACTUALIZADO A 4 COLUMNAS! */
     .stats-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
 
     .table-responsive { overflow-x: hidden; -webkit-overflow-scrolling: touch; border-radius: 16px; background: var(--card); border: 1px solid var(--border); }
@@ -317,25 +314,25 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
     </div>
 
     <div class="stats-container">
-        <div class="card" style="text-align:center; border-top: 3px solid var(--success);">
+        <div class="card clickable" style="text-align:center; border-top: 3px solid var(--success); cursor:pointer;" onclick="filtrarTabla('activos', this)">
             <small style="font-size:9px; color:var(--text-dim); text-transform:uppercase;">Activos</small><br>
             <b style="color:var(--success); font-size:1.6rem; font-weight:900;">
                 <?php echo $conn->query("SELECT id FROM abonados WHERE estado='activo' OR (prorroga_hasta IS NOT NULL AND prorroga_hasta > NOW())")->num_rows; ?>
             </b>
         </div>
-        <div class="card" style="text-align:center; border-top: 3px solid var(--danger);">
+        <div class="card clickable" style="text-align:center; border-top: 3px solid var(--danger); cursor:pointer;" onclick="filtrarTabla('cortes', this)">
             <small style="font-size:9px; color:var(--text-dim); text-transform:uppercase;">Cortes</small><br>
             <b style="color:var(--danger); font-size:1.6rem; font-weight:900;">
                 <?php echo $conn->query("SELECT id FROM abonados WHERE estado='cortado' AND (prorroga_hasta IS NULL OR prorroga_hasta <= NOW())")->num_rows; ?>
             </b>
         </div>
-        <div class="card" style="text-align:center; border-top: 3px solid var(--warning);">
+        <div class="card clickable" style="text-align:center; border-top: 3px solid var(--warning); cursor:pointer;" onclick="filtrarTabla('vencen', this)">
             <small style="font-size:9px; color:var(--text-dim); text-transform:uppercase;">Vencen</small><br>
             <b style="color:var(--warning); font-size:1.6rem; font-weight:900;">
                 <?php echo $conn->query("SELECT id FROM abonados WHERE dia_pago=$dia_actual AND estado != 'activo'")->num_rows; ?>
             </b>
         </div>
-        <div class="card" style="text-align:center; border-top: 3px solid #00bcd4;">
+        <div class="card clickable" style="text-align:center; border-top: 3px solid #00bcd4; cursor:pointer;" onclick="filtrarTabla('online', this)">
             <small style="font-size:9px; color:var(--text-dim); text-transform:uppercase;">En Línea</small><br>
             <b style="color:#00bcd4; font-size:1.6rem; font-weight:900;">
                 <?php echo $conectados_reales; ?>
@@ -412,8 +409,13 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
                     $tiene_prorroga = (!empty($r['prorroga_hasta']) && $r['prorroga_hasta'] > $ahora_mismo);
 
                     $esta_realmente_activo = ($r['estado'] == 'activo' || $tiene_prorroga);
+                    
+                    // VARIABLES PARA EL FILTRO JS
+                    $vence_hoy = ($r['dia_pago'] == $dia_actual && !$esta_realmente_activo) ? '1' : '0';
+                    $estado_filtro = $esta_realmente_activo ? 'activo' : 'cortado';
+                    $online_filtro = $online ? '1' : '0';
                 ?>
-                <tr id="fila-<?php echo htmlspecialchars($u); ?>">
+                <tr id="fila-<?php echo htmlspecialchars($u); ?>" data-estado="<?php echo $estado_filtro; ?>" data-online="<?php echo $online_filtro; ?>" data-vence="<?php echo $vence_hoy; ?>">
                     <td class="col-check" style="display:none; text-align:center;"><input type="checkbox" name="usuarios_sel[]" value="<?php echo htmlspecialchars($u); ?>" class="user-check" onchange="actualizarBarra()"></td>
                     <td>
                         <b style="color:var(--primary); font-size:1rem; display:block;"><?php echo htmlspecialchars($u); ?></b>
@@ -595,6 +597,50 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
 
 <script>
     let usuarioProrrogaActual = "";
+    let filtroActivo = ""; // NUEVO: Para saber qué tarjeta está tocada
+
+    // NUEVO: Función para filtrar tocando las tarjetas
+    function filtrarTabla(tipo, tarjetaElemento) {
+        let filas = document.querySelectorAll('#tablaBody tr');
+        let busqueda = document.getElementById('busqueda');
+        
+        // Limpiamos el buscador si se toca una tarjeta
+        busqueda.value = ""; 
+
+        // Si se toca la misma tarjeta que ya está activa, se desactiva el filtro
+        if (filtroActivo === tipo) {
+            tipo = "todos";
+        }
+        filtroActivo = tipo;
+
+        // Efecto visual en las tarjetas
+        document.querySelectorAll('.stats-container .card').forEach(c => {
+            c.style.borderWidth = "1px";
+            c.style.transform = "scale(1)";
+        });
+        
+        if(tipo !== "todos") {
+            tarjetaElemento.style.borderWidth = "2px";
+            tarjetaElemento.style.transform = "scale(0.98)";
+        }
+
+        // Lógica de mostrar/ocultar
+        filas.forEach(tr => {
+            if (tipo === "todos") {
+                tr.style.display = "";
+            } else if (tipo === "activos" && tr.getAttribute("data-estado") === "activo") {
+                tr.style.display = "";
+            } else if (tipo === "cortes" && tr.getAttribute("data-estado") === "cortado") {
+                tr.style.display = "";
+            } else if (tipo === "vencen" && tr.getAttribute("data-vence") === "1") {
+                tr.style.display = "";
+            } else if (tipo === "online" && tr.getAttribute("data-online") === "1") {
+                tr.style.display = "";
+            } else {
+                tr.style.display = "none";
+            }
+        });
+    }
 
     function ejecutarAccionLive(url, elemento) {
         const fila = elemento.closest('tr');
@@ -693,6 +739,13 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
     };
 
     document.getElementById('busqueda').onkeyup = function() { 
+        // Si buscas manualmente, reseteamos las tarjetas
+        filtroActivo = "";
+        document.querySelectorAll('.stats-container .card').forEach(c => {
+            c.style.borderWidth = "1px";
+            c.style.transform = "scale(1)";
+        });
+
         let f = this.value.toLowerCase(); 
         document.querySelectorAll('#tablaBody tr').forEach(tr => { 
             tr.style.display = tr.innerText.toLowerCase().includes(f) ? '' : 'none'; 
