@@ -19,6 +19,9 @@ $dir = $base_dir;
 $dia_actual = date('j');
 $mes_actual_inicio = date('Y-m-01'); 
 
+// --- CÁLCULO DE MÉTRICAS GLOBALES ---
+$total_abonados = $conn->query("SELECT id FROM abonados")->num_rows;
+
 // --- MEJORA: CONTEO EN LÍNEA EN TIEMPO REAL ---
 $fp = @fsockopen($mikrotik_ip, 8728, $errno, $errstr, 1);
 $conectados_reales = 0; 
@@ -27,6 +30,8 @@ if ($fp) {
     $cmd_online = "\"$python\" \"{$dir}estado_cliente.py\" \"global\" \"contar\"";
     $conectados_reales = (int)shell_exec($cmd_online . " 2>&1");
 }
+
+$offline_reales = max(0, $total_abonados - $conectados_reales);
 
 // --- MEJORA: ENDPOINT PARA CONSULTA LIVE ---
 if (isset($_GET['get_status_live'])) {
@@ -231,7 +236,8 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
     .card.clickable:hover { transform: translateY(-3px); filter: brightness(1.2); }
     .card.clickable:active { transform: scale(0.95); }
 
-    .stats-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
+    /* ¡ACTUALIZADO A 3 COLUMNAS (6 TARJETAS EN 2 FILAS)! */
+    .stats-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
 
     .table-responsive { overflow-x: hidden; -webkit-overflow-scrolling: touch; border-radius: 16px; background: var(--card); border: 1px solid var(--border); }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -314,28 +320,45 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
     </div>
 
     <div class="stats-container">
+        <div class="card clickable" style="text-align:center; border-top: 3px solid var(--primary); cursor:pointer;" onclick="filtrarTabla('todos', this)">
+            <small style="font-size:9px; color:var(--text-dim); text-transform:uppercase;">Total</small><br>
+            <b style="color:var(--primary); font-size:1.6rem; font-weight:900;">
+                <?php echo $total_abonados; ?>
+            </b>
+        </div>
+        
         <div class="card clickable" style="text-align:center; border-top: 3px solid var(--success); cursor:pointer;" onclick="filtrarTabla('activos', this)">
             <small style="font-size:9px; color:var(--text-dim); text-transform:uppercase;">Activos</small><br>
             <b style="color:var(--success); font-size:1.6rem; font-weight:900;">
                 <?php echo $conn->query("SELECT id FROM abonados WHERE estado='activo' OR (prorroga_hasta IS NOT NULL AND prorroga_hasta > NOW())")->num_rows; ?>
             </b>
         </div>
+        
         <div class="card clickable" style="text-align:center; border-top: 3px solid var(--danger); cursor:pointer;" onclick="filtrarTabla('cortes', this)">
             <small style="font-size:9px; color:var(--text-dim); text-transform:uppercase;">Cortes</small><br>
             <b style="color:var(--danger); font-size:1.6rem; font-weight:900;">
                 <?php echo $conn->query("SELECT id FROM abonados WHERE estado='cortado' AND (prorroga_hasta IS NULL OR prorroga_hasta <= NOW())")->num_rows; ?>
             </b>
         </div>
-        <div class="card clickable" style="text-align:center; border-top: 3px solid var(--warning); cursor:pointer;" onclick="filtrarTabla('vencen', this)">
-            <small style="font-size:9px; color:var(--text-dim); text-transform:uppercase;">Vencen</small><br>
-            <b style="color:var(--warning); font-size:1.6rem; font-weight:900;">
-                <?php echo $conn->query("SELECT id FROM abonados WHERE dia_pago=$dia_actual AND estado != 'activo'")->num_rows; ?>
-            </b>
-        </div>
+
         <div class="card clickable" style="text-align:center; border-top: 3px solid #00bcd4; cursor:pointer;" onclick="filtrarTabla('online', this)">
             <small style="font-size:9px; color:var(--text-dim); text-transform:uppercase;">En Línea</small><br>
             <b style="color:#00bcd4; font-size:1.6rem; font-weight:900;">
                 <?php echo $conectados_reales; ?>
+            </b>
+        </div>
+
+        <div class="card clickable" style="text-align:center; border-top: 3px solid #64748b; cursor:pointer;" onclick="filtrarTabla('offline', this)">
+            <small style="font-size:9px; color:var(--text-dim); text-transform:uppercase;">Offline</small><br>
+            <b style="color:#64748b; font-size:1.6rem; font-weight:900;">
+                <?php echo $offline_reales; ?>
+            </b>
+        </div>
+        
+        <div class="card clickable" style="text-align:center; border-top: 3px solid var(--warning); cursor:pointer;" onclick="filtrarTabla('vencen', this)">
+            <small style="font-size:9px; color:var(--text-dim); text-transform:uppercase;">Vencen</small><br>
+            <b style="color:var(--warning); font-size:1.6rem; font-weight:900;">
+                <?php echo $conn->query("SELECT id FROM abonados WHERE dia_pago=$dia_actual AND estado != 'activo'")->num_rows; ?>
             </b>
         </div>
     </div>
@@ -597,23 +620,19 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
 
 <script>
     let usuarioProrrogaActual = "";
-    let filtroActivo = ""; // NUEVO: Para saber qué tarjeta está tocada
+    let filtroActivo = ""; 
 
-    // NUEVO: Función para filtrar tocando las tarjetas
     function filtrarTabla(tipo, tarjetaElemento) {
         let filas = document.querySelectorAll('#tablaBody tr');
         let busqueda = document.getElementById('busqueda');
         
-        // Limpiamos el buscador si se toca una tarjeta
         busqueda.value = ""; 
 
-        // Si se toca la misma tarjeta que ya está activa, se desactiva el filtro
         if (filtroActivo === tipo) {
             tipo = "todos";
         }
         filtroActivo = tipo;
 
-        // Efecto visual en las tarjetas
         document.querySelectorAll('.stats-container .card').forEach(c => {
             c.style.borderWidth = "1px";
             c.style.transform = "scale(1)";
@@ -624,7 +643,6 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
             tarjetaElemento.style.transform = "scale(0.98)";
         }
 
-        // Lógica de mostrar/ocultar
         filas.forEach(tr => {
             if (tipo === "todos") {
                 tr.style.display = "";
@@ -635,6 +653,8 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
             } else if (tipo === "vencen" && tr.getAttribute("data-vence") === "1") {
                 tr.style.display = "";
             } else if (tipo === "online" && tr.getAttribute("data-online") === "1") {
+                tr.style.display = "";
+            } else if (tipo === "offline" && tr.getAttribute("data-online") === "0") {
                 tr.style.display = "";
             } else {
                 tr.style.display = "none";
@@ -739,7 +759,6 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
     };
 
     document.getElementById('busqueda').onkeyup = function() { 
-        // Si buscas manualmente, reseteamos las tarjetas
         filtroActivo = "";
         document.querySelectorAll('.stats-container .card').forEach(c => {
             c.style.borderWidth = "1px";
