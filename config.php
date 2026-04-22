@@ -47,9 +47,37 @@ if (isset($_GET['get_status_live'])) {
     exit;
 }
 
-// 2. MONITOR LIVE (Puntos ON/OFF)
+// --- 2. OBTENER ESTADO ONLINE DESDE MIKROTIK (SUBIDO AQUÍ PARA CALCULAR) ---
 $ips_json = shell_exec("\"$python\" \"{$dir}obtener_ips.py\" 2>&1");
 $ips_online = json_decode($ips_json, true) ?: [];
+
+// --- CÁLCULO DE MÉTRICAS GLOBALES (100% EXACTO BASADO EN TABLA) ---
+$total_abonados = 0;
+$conectados_reales = 0;
+
+$res_ab = $conn->query("SELECT user_mikrotik FROM abonados");
+while($row = $res_ab->fetch_assoc()) {
+    $total_abonados++;
+    // Comparamos el usuario de la BD con los que MikroTik reporta como activos
+    if (isset($ips_online[$row['user_mikrotik']])) {
+        $conectados_reales++;
+    }
+}
+$offline_reales = max(0, $total_abonados - $conectados_reales);
+
+// --- MEJORA: ENDPOINT PARA CONSULTA LIVE ---
+if (isset($_GET['get_status_live'])) {
+    $ahora_str = date('Y-m-d H:i:s');
+    $res = $conn->query("SELECT user_mikrotik, estado, proteccion, proteccion_manual, prorroga_hasta FROM abonados");
+    $data = [];
+    while($row = $res->fetch_assoc()) { 
+        $row['tiene_prorroga'] = (!empty($row['prorroga_hasta']) && $row['prorroga_hasta'] > $ahora_str);
+        $data[$row['user_mikrotik']] = $row; 
+    }
+    header('Content-Type: application/json');
+    echo json_encode($data);
+    exit;
+}
 
 // --- 3. PROCESAMIENTO DE ACCIONES INDIVIDUALES (GET) ---
 if (isset($_GET['accion']) && isset($_GET['user'])) {

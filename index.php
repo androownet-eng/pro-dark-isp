@@ -2,7 +2,6 @@
 // --- 1. NÚCLEO Y SEGURIDAD ---
 require_once "config_global.php"; 
 
-// EL PORTERO: Si el usuario no está logueado, lo pateamos al login
 if (!isset($_SESSION['admin_auth'])) {
     header("Location: login.php");
     exit();
@@ -10,14 +9,13 @@ if (!isset($_SESSION['admin_auth'])) {
 
 // --- 2. VERIFICACIÓN DE CONEXIÓN MIKROTIK Y CONTEO EN LÍNEA ---
 $fp = @fsockopen($mikrotik_ip, 8728, $errno, $errstr, 1);
-$conectados_reales = 0; // Valor por defecto si el MikroTik está apagado
+$conectados_reales = 0; 
 
 if ($fp) {
     $status_color = "var(--success)";
     $status_text = "Online";
     fclose($fp);
-    
-    // Llamamos al Python centralizado con la acción "contar" (pasamos "global" como usuario fantasma)
+
     $cmd_online = "\"$python_path\" \"{$base_dir}estado_cliente.py\" \"global\" \"contar\"";
     $conectados_reales = (int)shell_exec($cmd_online . " 2>&1");
 } else {
@@ -41,12 +39,9 @@ if (isset($_POST['btn_modal_pago'])) {
     $sql_pago = "INSERT INTO pagos (user_mikrotik, monto, metodo, fecha_pago) VALUES ('$user', $monto, '$metodo', NOW())";
 
     if ($conn->query($sql_pago)) {
-        // [!] AQUÍ ESTÁ EL CAMBIO: Se añadió prorroga_hasta = NULL para limpiar el cartelito al pagar
         $conn->query("UPDATE abonados SET estado = 'activo', pagado_hasta = '$fecha_vencimiento', proteccion = 1, prorroga_hasta = NULL WHERE user_mikrotik = '$user'");
-
         $u_esc = escapeshellarg($user);
         shell_exec("\"$python_path\" \"{$base_dir}estado_cliente.py\" $u_esc \"activar\" 2>&1");
-
         header("Location: index.php?status=ok");
         exit();
     }
@@ -59,9 +54,10 @@ $stats = $conn->query("SELECT
     SUM(CASE WHEN estado = 'cortado' AND (prorroga_hasta IS NULL OR prorroga_hasta <= NOW()) THEN 1 ELSE 0 END) as cortes
     FROM abonados")->fetch_assoc();
 
-$clientes_list = $conn->query("SELECT * FROM abonados ORDER BY id DESC LIMIT 10");
+// QUITAMOS EL LIMIT 10 PARA QUE EL FILTRO MUESTRE TODOS LOS CLIENTES DEL DÍA
+$clientes_list = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
 
-// --- 5. DATOS PARA LA GRÁFICA (Distribución de Planes) ---
+// --- 5. DATOS PARA LA GRÁFICA ---
 $planes_res = $conn->query("SELECT plan, COUNT(*) as cantidad FROM abonados GROUP BY plan");
 $planes_labels = [];
 $planes_data = [];
@@ -70,10 +66,10 @@ while($p = $planes_res->fetch_assoc()){
     $planes_data[] = $p['cantidad'];
 }
 
-// --- 6. PRÓXIMOS VENCIMIENTOS (Avisos Críticos) ---
+// --- 6. PRÓXIMOS VENCIMIENTOS ---
 $vencimientos = $conn->query("SELECT user_mikrotik, pagado_hasta, plan FROM abonados WHERE estado = 'activo' AND pagado_hasta BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 3 DAY) ORDER BY pagado_hasta ASC LIMIT 5");
 
-// --- 7. DENSIDAD DE COBROS POR DÍA (NUEVO) ---
+// --- 7. DENSIDAD DE COBROS POR DÍA ---
 $res_dias = $conn->query("SELECT dia_pago, COUNT(*) as cantidad FROM abonados GROUP BY dia_pago ORDER BY dia_pago ASC");
 $distribucion_dias = [];
 while($row = $res_dias->fetch_assoc()){
@@ -125,22 +121,18 @@ while($row = $res_dias->fetch_assoc()){
 
         .chart-container { position: relative; height: 220px; width: 100%; }
 
-        .vencimiento-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem; }
-        .vencimiento-item:last-child { border-bottom: none; }
-        .vencimiento-date { color: var(--warning); font-weight: 700; font-size: 0.75rem; background: rgba(251, 191, 36, 0.1); padding: 3px 8px; border-radius: 6px; }
-
-        .client-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); }
+        /* LISTA DE CLIENTES FILTRABLE */
+        .client-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); transition: 0.3s; }
         .client-item:last-child { border-bottom: none; }
         .badge { font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; }
         .badge.activo { background: rgba(16, 185, 129, 0.15); color: var(--success); }
         .badge.corte { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
 
-        .escudo { font-size: 0.8rem; margin-left: 6px; }
-        .escudo-auto { color: var(--shield-auto); }
-        .escudo-manual { color: var(--shield-manual); filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.3)); }
-        .escudo-prorroga { color: var(--danger); font-size: 0.7rem; margin-left: 5px; animation: pulse 1.5s infinite; }
+        .dia-cobro-card { cursor: pointer; transition: 0.3s; flex-shrink: 0; min-width: 85px; text-align: center; border-radius: 16px; padding: 12px 20px; border: 1px solid rgba(59, 130, 246, 0.2); background: rgba(59, 130, 246, 0.05); }
+        .dia-cobro-card:hover { border-color: var(--primary); background: rgba(59, 130, 246, 0.1); }
+        .dia-active { border-color: var(--primary) !important; background: rgba(59, 130, 246, 0.2) !important; box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
 
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         #modalPago { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index:1000; align-items:center; justify-content:center; }
         .modal-content { background: #1e293b; padding: 30px; border-radius: 28px; width: 90%; max-width: 380px; border: 1px solid var(--primary); }
@@ -156,7 +148,6 @@ while($row = $res_dias->fetch_assoc()){
             <i class="fas fa-satellite-dish"></i>
             <h1>PRO-DARK ISP</h1>
         </div>
-
         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
             <div class="status-pill" style="color: <?php echo $status_color; ?>; width: 100%;">
                 <i class="fas fa-circle <?php echo ($status_text=='Online'?'':'blink'); ?>"></i> <?php echo $status_text; ?>
@@ -203,7 +194,6 @@ while($row = $res_dias->fetch_assoc()){
                 <canvas id="planChart"></canvas>
             </div>
         </div>
-
         <div class="panel-box">
             <div class="panel-title"><i class="fas fa-exclamation-triangle" style="color: var(--warning)"></i> Próximos Vencimientos</div>
             <?php if ($vencimientos && $vencimientos->num_rows > 0): ?>
@@ -216,58 +206,54 @@ while($row = $res_dias->fetch_assoc()){
             <?php else: ?>
                 <div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; margin-top: 30px;">
                     <i class="fas fa-check-circle" style="font-size: 2rem; opacity: 0.3; margin-bottom: 10px; display: block;"></i>
-                    Red estable.<br>No hay cortes próximos.
+                    Red estable.
                 </div>
             <?php endif; ?>
         </div>
     </div>
 
     <div class="panel-box" style="margin-bottom: 25px;">
-        <div class="panel-title"><i class="fas fa-calendar-day" style="color: var(--primary);"></i> Mapa de Cobros por Día</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <div class="panel-title" style="margin:0;"><i class="fas fa-calendar-day" style="color: var(--primary);"></i> Mapa de Cobros por Día</div>
+            <button onclick="filtrarPorDia('todos', this)" style="background:none; border:none; color:var(--primary); font-size:10px; font-weight:800; cursor:pointer; text-transform:uppercase;">Ver Todos</button>
+        </div>
 
         <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: var(--primary) var(--bg-card);">
-            <?php if (!empty($distribucion_dias)): ?>
-                <?php foreach($distribucion_dias as $dd): ?>
-                <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); padding: 12px 20px; border-radius: 16px; text-align: center; min-width: 85px; flex-shrink: 0; transition: 0.3s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='rgba(59, 130, 246, 0.2)'">
-                    <span style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Día <?php echo $dd['dia_pago']; ?></span><br>
-                    <b style="font-size: 1.4rem; color: var(--text-main);"><?php echo $dd['cantidad']; ?></b><br>
-                    <small style="font-size: 0.6rem; color: var(--primary); font-weight: 700;">CLIENTES</small>
-                </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div style="color: var(--text-dim); font-size: 0.8rem; padding: 10px;">Aún no hay clientes registrados.</div>
-            <?php endif; ?>
+            <?php foreach($distribucion_dias as $dd): ?>
+            <div onclick="filtrarPorDia(<?php echo $dd['dia_pago']; ?>, this)" class="dia-cobro-card">
+                <span style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Día <?php echo $dd['dia_pago']; ?></span><br>
+                <b style="font-size: 1.4rem; color: var(--text-main);"><?php echo $dd['cantidad']; ?></b><br>
+                <small style="font-size: 0.6rem; color: var(--primary); font-weight: 700;">CLIENTES</small>
+            </div>
+            <?php endforeach; ?>
         </div>
     </div>
 
     <div class="panel-box" style="margin-bottom: 30px;">
-        <div class="panel-title"><i class="fas fa-history"></i> Últimos Registros</div>
-        <?php while($c = $clientes_list->fetch_assoc()): 
-            $es_manual = ($c['proteccion_manual'] == 1);
-            $es_auto = ($c['proteccion'] == 1 && !$es_manual);
-            $tiene_prorroga = (!empty($c['prorroga_hasta']) && strtotime($c['prorroga_hasta']) > time());
-            $esta_realmente_activo = ($c['estado'] == 'activo' || $tiene_prorroga);
-        ?>
-        <div class="client-item">
-            <div>
-                <b style="display:flex; align-items:center; font-size:0.9rem;">
-                    <?php echo htmlspecialchars($c['user_mikrotik']); ?>
-                    <?php if($es_manual): ?>
-                        <i class="fas fa-shield-virus escudo escudo-manual" title="Protección Manual"></i>
-                    <?php elseif($es_auto): ?>
-                        <i class="fas fa-shield-alt escudo escudo-auto" title="Protegido por Pago"></i>
-                    <?php endif; ?>
-                    <?php if($tiene_prorroga): ?>
-                        <i class="fas fa-clock-rotate-left escudo-prorroga" title="Prórroga Activa"></i>
-                    <?php endif; ?>
-                </b>
-                <small style="color:var(--text-dim); font-size:0.7rem;">Corte: Día <?php echo $c['dia_pago']; ?> | <?php echo str_replace('PPPoeClientes-', '', $c['plan']); ?></small>
+        <div class="panel-title" id="titulo-lista"><i class="fas fa-history"></i> Todos los Abonados</div>
+        <div id="contenedor-clientes">
+            <?php while($c = $clientes_list->fetch_assoc()): 
+                $es_manual = ($c['proteccion_manual'] == 1);
+                $es_auto = ($c['proteccion'] == 1 && !$es_manual);
+                $tiene_prorroga = (!empty($c['prorroga_hasta']) && strtotime($c['prorroga_hasta']) > time());
+                $esta_realmente_activo = ($c['estado'] == 'activo' || $tiene_prorroga);
+            ?>
+            <div class="client-item lista-cliente-index" data-dia="<?php echo $c['dia_pago']; ?>">
+                <div>
+                    <b style="display:flex; align-items:center; font-size:0.9rem;">
+                        <?php echo htmlspecialchars($c['user_mikrotik']); ?>
+                        <?php if($es_manual): ?> <i class="fas fa-shield-virus escudo-manual" style="margin-left:5px; color:var(--warning);" title="Protección Manual"></i> <?php endif; ?>
+                        <?php if($es_auto): ?> <i class="fas fa-shield-alt" style="margin-left:5px; color:var(--shield-auto);" title="Protegido por Pago"></i> <?php endif; ?>
+                        <?php if($tiene_prorroga): ?> <i class="fas fa-clock-rotate-left" style="margin-left:5px; color:var(--danger); animation:pulse 1.5s infinite;" title="Prórroga Activa"></i> <?php endif; ?>
+                    </b>
+                    <small style="color:var(--text-dim); font-size:0.7rem;">Corte: Día <?php echo $c['dia_pago']; ?> | <?php echo str_replace('PPPoeClientes-', '', $c['plan']); ?></small>
+                </div>
+                <div class="badge <?php echo ($esta_realmente_activo) ? 'activo' : 'corte'; ?>">
+                    <?php echo ($esta_realmente_activo) ? 'Activo' : 'Corte'; ?>
+                </div>
             </div>
-            <div class="badge <?php echo ($esta_realmente_activo) ? 'activo' : 'corte'; ?>">
-                <?php echo ($esta_realmente_activo) ? 'Activo' : 'Corte'; ?>
-            </div>
+            <?php endwhile; ?>
         </div>
-        <?php endwhile; ?>
     </div>
 
     <div id="modalPago" onclick="cerrarModalExterno(event)">
@@ -287,53 +273,66 @@ while($row = $res_dias->fetch_assoc()){
                     <option value="Efectivo">💵 Efectivo</option>
                     <option value="Zelle">💳 Zelle</option>
                 </select>
-
-                <button type="submit" name="btn_modal_pago" class="btn-action bg-blue" style="width:100%; margin-top:10px;">
-                    INMUNIZAR Y GUARDAR
-                </button>
+                <button type="submit" name="btn_modal_pago" class="btn-action bg-blue" style="width:100%; margin-top:10px;">INMUNIZAR Y GUARDAR</button>
                 <button type="button" onclick="cerrarModal()" style="width:100%; background:none; border:none; color:var(--text-dim); margin-top:15px; cursor:pointer; font-weight:700;">CANCELAR</button>
             </form>
         </div>
     </div>
 
     <script>
-        // --- RELOJ EN TIEMPO REAL ---
         function actualizarReloj() {
             const fecha = new Date();
             const opcionesFecha = { weekday: 'short', day: '2-digit', month: 'short' };
             const opcionesHora = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
-
-            const fechaStr = fecha.toLocaleDateString('es-VE', opcionesFecha);
-            const horaStr = fecha.toLocaleTimeString('es-VE', opcionesHora);
-
-            document.getElementById('reloj-digital').innerHTML = `${fechaStr.toUpperCase()} <span style="color:var(--primary); margin-left:4px;">${horaStr}</span>`;
+            document.getElementById('reloj-digital').innerHTML = `${fecha.toLocaleDateString('es-VE', opcionesFecha).toUpperCase()} <span style="color:var(--primary); margin-left:4px;">${fecha.toLocaleTimeString('es-VE', opcionesHora)}</span>`;
         }
         setInterval(actualizarReloj, 1000);
         actualizarReloj();
 
-        // --- FUNCIONES DEL MODAL ---
         function abrirModal() { document.getElementById('modalPago').style.display = 'flex'; }
         function cerrarModal() { document.getElementById('modalPago').style.display = 'none'; }
         function cerrarModalExterno(e) { if(e.target.id === 'modalPago') cerrarModal(); }
 
-        // --- INICIALIZAR GRÁFICA ---
+        // --- FILTRADO DINÁMICO POR DÍA ---
+        function filtrarPorDia(dia, elemento) {
+            const clientes = document.querySelectorAll('.lista-cliente-index');
+            const tarjetas = document.querySelectorAll('.dia-cobro-card');
+            const titulo = document.getElementById('titulo-lista');
+
+            tarjetas.forEach(t => t.classList.remove('dia-active'));
+
+            if (dia === 'todos' || elemento.getAttribute('data-active') === 'true') {
+                clientes.forEach(c => c.style.display = 'flex');
+                tarjetas.forEach(t => t.setAttribute('data-active', 'false'));
+                titulo.innerHTML = '<i class="fas fa-history"></i> Todos los Abonados';
+                return;
+            }
+
+            elemento.classList.add('dia-active');
+            tarjetas.forEach(t => t.setAttribute('data-active', 'false'));
+            elemento.setAttribute('data-active', 'true');
+            titulo.innerHTML = `<i class="fas fa-calendar-check"></i> Abonados del Día ${dia}`;
+
+            clientes.forEach(cliente => {
+                if (cliente.getAttribute('data-dia') == dia) {
+                    cliente.style.display = 'flex';
+                    cliente.style.animation = 'fadeIn 0.3s ease';
+                } else {
+                    cliente.style.display = 'none';
+                }
+            });
+        }
+
         const ctx = document.getElementById('planChart').getContext('2d');
         new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: <?php echo json_encode($planes_labels); ?>,
                 datasets: [{
-                    label: 'Clientes Activos',
+                    label: 'Clientes',
                     data: <?php echo json_encode($planes_data); ?>,
-                    backgroundColor: [
-                        'rgba(59, 130, 246, 0.8)', 
-                        'rgba(16, 185, 129, 0.8)', 
-                        'rgba(251, 191, 36, 0.8)', 
-                        'rgba(139, 92, 246, 0.8)'  
-                    ],
-                    borderColor: [
-                        '#3b82f6', '#10b981', '#fbbf24', '#8b5cf6'
-                    ],
+                    backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(16, 185, 129, 0.8)', 'rgba(251, 191, 36, 0.8)', 'rgba(139, 92, 246, 0.8)'],
+                    borderColor: ['#3b82f6', '#10b981', '#fbbf24', '#8b5cf6'],
                     borderWidth: 1,
                     borderRadius: 6
                 }]
@@ -341,19 +340,11 @@ while($row = $res_dias->fetch_assoc()){
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                indexAxis: 'y', 
-                plugins: {
-                    legend: { display: false } 
-                },
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
                 scales: {
-                    x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                        ticks: { color: '#64748b', stepSize: 1 }
-                    },
-                    y: {
-                        grid: { display: false },
-                        ticks: { color: '#f8fafc', font: { weight: 'bold' } }
-                    }
+                    x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#64748b', stepSize: 1 } },
+                    y: { grid: { display: false }, ticks: { color: '#f8fafc', font: { weight: 'bold' } } }
                 }
             }
         });
