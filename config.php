@@ -51,8 +51,7 @@ if (isset($_GET['get_status_live'])) {
 $ips_json = shell_exec("\"$python\" \"{$dir}obtener_ips.py\" 2>&1");
 $ips_online = json_decode($ips_json, true) ?: [];
 
-// --- 3. PROCESAMIENTO DE ACCIONES (MOTOR UNIFICADO BLINDADO) ---
-
+// --- 3. PROCESAMIENTO DE ACCIONES INDIVIDUALES (GET) ---
 if (isset($_GET['accion']) && isset($_GET['user'])) {
     $u = $conn->real_escape_string($_GET['user']);
     $accion = $_GET['accion'];
@@ -84,13 +83,29 @@ if (isset($_GET['accion']) && isset($_GET['user'])) {
     }
 }
 
+// --- F. ELIMINAR CLIENTE (CONTROL SEPARADO) ---
+if (isset($_GET['delete_action']) && isset($_GET['user_del'])) {
+    $u = $conn->real_escape_string($_GET['user_del']);
+    $accion_del = $_GET['delete_action'];
+
+    if ($accion_del === 'both') {
+        $u_esc = escapeshellarg($u);
+        shell_exec("\"$python\" \"{$dir}estado_cliente.py\" $u_esc \"eliminar\" 2>&1");
+    }
+
+    $conn->query("DELETE FROM abonados WHERE user_mikrotik = '$u'");
+    header("Location: config.php?res=eliminado");
+    exit;
+}
+
+// --- CREAR Y EDITAR USUARIOS ---
 if (isset($_POST['crear_usuario'])) {
     $u = $conn->real_escape_string(trim($_POST['user']));
     $p_pass = $conn->real_escape_string(trim($_POST['pass'])); 
     $p_plan = $conn->real_escape_string($_POST['plan']);
     $d = (int)$_POST['dia_pago'];
     $h = $_POST['hora_corte'];
-    
+
     if (strlen($h) == 5) { $h .= ':00'; }
 
     $dia_f = str_pad($d, 2, "0", STR_PAD_LEFT);
@@ -115,15 +130,6 @@ if (isset($_POST['crear_usuario'])) {
     }
 }
 
-if (isset($_GET['delete_user'])) {
-    $u = $conn->real_escape_string($_GET['delete_user']);
-    $u_esc = escapeshellarg($u);
-    shell_exec("\"$python\" \"{$dir}estado_cliente.py\" $u_esc \"eliminar\" 2>&1");
-    $conn->query("DELETE FROM abonados WHERE user_mikrotik = '$u'");
-    header("Location: config.php?res=eliminado");
-    exit;
-}
-
 if (isset($_POST['editar_cliente'])) {
     $u = $conn->real_escape_string($_POST['user_edit']); 
     $n_plan = $conn->real_escape_string($_POST['nuevo_plan']); 
@@ -142,6 +148,7 @@ if (isset($_POST['editar_cliente'])) {
     header("Location: config.php?res=editado"); exit;
 }
 
+// --- SINCRONIZACIÓN Y MIKROTIK IMPORT ---
 if (isset($_POST['sincronizar_ahora'])) {
     $py_exe = $python; 
     $py_script = $dir . "estado_cliente.py"; 
@@ -183,6 +190,7 @@ if (isset($_POST['importar_seleccionados']) && !empty($_POST['usuarios_mt'])) {
     exit;
 }
 
+// --- ACCIONES MASIVAS ---
 if (isset($_POST['accion_masiva']) && !empty($_POST['usuarios_sel'])) {
     $accion = $_POST['accion_masiva'];
     $n_plan = $_POST['plan_masivo'] ?? '';
@@ -200,6 +208,11 @@ if (isset($_POST['accion_masiva']) && !empty($_POST['usuarios_sel'])) {
         } elseif ($accion == 'cortar') {
             $conn->query("UPDATE abonados SET estado='cortado', proteccion=0, proteccion_manual=0 WHERE user_mikrotik='$u'");
             shell_exec("\"$python\" \"{$dir}estado_cliente.py\" $u_esc \"cortar\" 2>&1");
+        } elseif ($accion == 'quitar_panel') {
+            $conn->query("DELETE FROM abonados WHERE user_mikrotik='$u'");
+        } elseif ($accion == 'eliminar_total') {
+            shell_exec("\"$python\" \"{$dir}estado_cliente.py\" $u_esc \"eliminar\" 2>&1");
+            $conn->query("DELETE FROM abonados WHERE user_mikrotik='$u'");
         }
     }
     header("Location: config.php?res=masivo"); exit;
@@ -236,7 +249,6 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
     .card.clickable:hover { transform: translateY(-3px); filter: brightness(1.2); }
     .card.clickable:active { transform: scale(0.95); }
 
-    /* ¡ACTUALIZADO A 3 COLUMNAS (6 TARJETAS EN 2 FILAS)! */
     .stats-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
 
     .table-responsive { overflow-x: hidden; -webkit-overflow-scrolling: touch; border-radius: 16px; background: var(--card); border: 1px solid var(--border); }
@@ -295,8 +307,8 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
 
     .options-dropdown { position: relative; display: inline-block; }
     .options-btn { background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer; padding: 5px; }
-    .options-content { display: none; position: absolute; right: 0; background-color: #1e293b; min-width: 140px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 100; border-radius: 8px; border: 1px solid var(--border); }
-    .options-content a, .options-content button { color: var(--text-main); padding: 10px 15px; text-decoration: none; display: flex; align-items: center; gap: 10px; width: 100%; border: none; background: none; font-size: 13px; cursor: pointer; text-align: left; }
+    .options-content { display: none; position: absolute; right: 0; background-color: #1e293b; min-width: 150px; box-shadow: 0 8px 16px rgba(0,0,0,0.4); z-index: 100; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
+    .options-content a, .options-content button { color: var(--text-main); padding: 12px 15px; text-decoration: none; display: flex; align-items: center; gap: 10px; width: 100%; border: none; background: none; font-size: 13px; cursor: pointer; text-align: left; }
     .options-content a:hover, .options-content button:hover { background-color: #334155; }
     .options-dropdown:hover .options-content { display: block; }
 
@@ -326,14 +338,14 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
                 <?php echo $total_abonados; ?>
             </b>
         </div>
-        
+
         <div class="card clickable" style="text-align:center; border-top: 3px solid var(--success); cursor:pointer;" onclick="filtrarTabla('activos', this)">
             <small style="font-size:9px; color:var(--text-dim); text-transform:uppercase;">Activos</small><br>
             <b style="color:var(--success); font-size:1.6rem; font-weight:900;">
                 <?php echo $conn->query("SELECT id FROM abonados WHERE estado='activo' OR (prorroga_hasta IS NOT NULL AND prorroga_hasta > NOW())")->num_rows; ?>
             </b>
         </div>
-        
+
         <div class="card clickable" style="text-align:center; border-top: 3px solid var(--danger); cursor:pointer;" onclick="filtrarTabla('cortes', this)">
             <small style="font-size:9px; color:var(--text-dim); text-transform:uppercase;">Cortes</small><br>
             <b style="color:var(--danger); font-size:1.6rem; font-weight:900;">
@@ -354,7 +366,7 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
                 <?php echo $offline_reales; ?>
             </b>
         </div>
-        
+
         <div class="card clickable" style="text-align:center; border-top: 3px solid var(--warning); cursor:pointer;" onclick="filtrarTabla('vencen', this)">
             <small style="font-size:9px; color:var(--text-dim); text-transform:uppercase;">Vencen</small><br>
             <b style="color:var(--warning); font-size:1.6rem; font-weight:900;">
@@ -403,10 +415,23 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
             <option value="">-- Cambiar Plan --</option>
             <?php $p_res2 = $conn->query("SELECT * FROM planes"); while($p2 = $p_res2->fetch_assoc()) { echo "<option value='".$p2['perfil_mikrotik']."'>".$p2['nombre_visible']."</option>"; } ?>
         </select>
+        
         <button type="submit" name="accion_masiva" value="cambiar_plan" class="btn btn-orange" style="width:100%; margin-bottom:10px; padding:12px; border-radius:20px;">APLICAR PLAN</button>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <button type="submit" name="accion_masiva" value="activar" class="btn btn-blue">ACTIVA</button>
-            <button type="submit" name="accion_masiva" value="cortar" class="btn" style="background:var(--danger);">CORTA</button>
+        
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button type="submit" name="accion_masiva" value="activar" class="btn btn-blue">ACTIVA</button>
+                <button type="submit" name="accion_masiva" value="cortar" class="btn" style="background:var(--warning); color:#000;">CORTA</button>
+            </div>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button type="submit" name="accion_masiva" value="quitar_panel" class="btn btn-gray" onclick="return confirm('¿SEGURO? Esto quitará a todos los clientes seleccionados SOLO del Panel (Seguirán conectados en MikroTik).');">
+                    <i class="fas fa-unlink"></i> QUITAR (PANEL)
+                </button>
+                <button type="submit" name="accion_masiva" value="eliminar_total" class="btn" style="background:var(--danger);" onclick="return confirm('⚠️ ¡ALERTA ROJA! ¿Deseas ELIMINAR DEFINITIVAMENTE a todos los seleccionados del Panel y del MikroTik? Esta acción no se puede deshacer.');">
+                    <i class="fas fa-trash-alt"></i> ELIMINAR TOTAL
+                </button>
+            </div>
         </div>
     </div>
 
@@ -432,7 +457,11 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
                     $tiene_prorroga = (!empty($r['prorroga_hasta']) && $r['prorroga_hasta'] > $ahora_mismo);
 
                     $esta_realmente_activo = ($r['estado'] == 'activo' || $tiene_prorroga);
-                    
+
+                    // Lógica para aviso visual "Vence Mañana"
+                    $dia_manana = date('j', strtotime('+1 day'));
+                    $vence_manana = ($r['dia_pago'] == $dia_manana && $esta_realmente_activo);
+
                     // VARIABLES PARA EL FILTRO JS
                     $vence_hoy = ($r['dia_pago'] == $dia_actual && !$esta_realmente_activo) ? '1' : '0';
                     $estado_filtro = $esta_realmente_activo ? 'activo' : 'cortado';
@@ -441,7 +470,12 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
                 <tr id="fila-<?php echo htmlspecialchars($u); ?>" data-estado="<?php echo $estado_filtro; ?>" data-online="<?php echo $online_filtro; ?>" data-vence="<?php echo $vence_hoy; ?>">
                     <td class="col-check" style="display:none; text-align:center;"><input type="checkbox" name="usuarios_sel[]" value="<?php echo htmlspecialchars($u); ?>" class="user-check" onchange="actualizarBarra()"></td>
                     <td>
-                        <b style="color:var(--primary); font-size:1rem; display:block;"><?php echo htmlspecialchars($u); ?></b>
+                        <b style="color:var(--primary); font-size:1rem; display:flex; align-items:center; gap:5px;">
+                            <?php echo htmlspecialchars($u); ?>
+                            <?php if($vence_manana): ?>
+                                <i class="fas fa-exclamation-triangle" style="color: var(--warning); font-size: 11px;" title="Corte programado para mañana"></i>
+                            <?php endif; ?>
+                        </b>
                         <small style="color:var(--text-dim)"><?php echo htmlspecialchars(str_replace('PPPoeClientes-', '', $r['plan'])); ?></small><br>
                         <div style="font-size:11px; background: rgba(59, 130, 246, 0.05); color: var(--primary); padding: 3px 6px; border-radius: 4px; display: inline-block; border: 1px solid rgba(59, 130, 246, 0.1); margin-top: 4px;">
                             Día <?php echo $r['dia_pago']; ?> @ <?php echo date("h:i A", strtotime($r['hora_corte'])); ?>
@@ -484,14 +518,25 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
                         <div class="options-dropdown">
                             <button type="button" class="options-btn"><i class="fas fa-ellipsis-v"></i></button>
                             <div class="options-content">
+                                <button type="button" onclick="verDetalles('<?php echo htmlspecialchars($u); ?>', '<?php echo $r['descarga_total'] ?? 0; ?>', '<?php echo $r['subida_total'] ?? 0; ?>', '<?php echo $r['ultima_conexion'] ?? ''; ?>')" style="color:#00bcd4">
+                                    <i class="fas fa-chart-area"></i> Ver Detalles
+                                </button>
+                                
                                 <button type="button" onclick="solicitarProrroga('<?php echo htmlspecialchars($u); ?>')" style="color:var(--warning)">
                                     <i class="fas fa-clock-rotate-left"></i> Dar Prórroga
                                 </button>
+                                
                                 <button type="button" onclick="abrirEdit('<?php echo htmlspecialchars($u); ?>', '<?php echo $r['dia_pago']; ?>', '<?php echo $r['hora_corte']; ?>')" style="color:var(--primary)">
                                     <i class="fas fa-edit"></i> Editar Ficha
                                 </button>
-                                <a href="config.php?delete_user=<?php echo urlencode($u); ?>" onclick="return confirm('¿Eliminar a <?php echo htmlspecialchars($u); ?> permanentemente?')" style="color:var(--danger)">
-                                    <i class="fas fa-trash-alt"></i> Eliminar
+
+                                <div style="border-top: 1px solid var(--border); margin: 5px 0;"></div>
+
+                                <a href="config.php?delete_action=db_only&user_del=<?php echo urlencode($u); ?>" onclick="return confirm('¿Quitar a <?php echo htmlspecialchars($u); ?> solo del Panel? Seguirá activo en el MikroTik.')" style="color:var(--warning)">
+                                    <i class="fas fa-unlink"></i> Quitar del Panel
+                                </a>
+                                <a href="config.php?delete_action=both&user_del=<?php echo urlencode($u); ?>" onclick="return confirm('¿ELIMINAR a <?php echo htmlspecialchars($u); ?> DEFINITIVAMENTE del Panel y del MikroTik?')" style="color:var(--danger)">
+                                    <i class="fas fa-trash-alt"></i> Eliminar Total
                                 </a>
                             </div>
                         </div>
@@ -571,6 +616,36 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
     </div>
 </div>
 
+<div id="modalDetalles" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); align-items:center; justify-content:center;">
+    <div style="background:var(--card); max-width:400px; width:90%; padding:25px; border-radius:24px; border:1px solid #00bcd4; box-shadow:0 20px 50px rgba(0,0,0,0.5);">
+        <div style="text-align:center; margin-bottom:20px;">
+            <div style="width:60px; height:60px; background:rgba(0, 188, 212, 0.1); color:#00bcd4; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:24px; border:1px solid rgba(0, 188, 212, 0.3);">
+                <i class="fas fa-chart-pie"></i>
+            </div>
+            <h3 id="detUserTit" style="margin:0; color:#fff; font-weight:900; letter-spacing:1px; text-transform:uppercase; font-size:1.2rem;"></h3>
+            <p style="color:var(--text-dim); font-size:12px; margin-top:5px;">Estadísticas Acumuladas</p>
+        </div>
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom: 20px;">
+            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 15px; border-radius: 15px; text-align: center;">
+                <span style="font-size:10px; color:var(--success); text-transform:uppercase; font-weight:bold;"><i class="fas fa-arrow-down"></i> Descarga</span><br>
+                <b id="detDescarga" style="color:white; font-size:1.2rem;">0 GB</b>
+            </div>
+            <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 15px; border-radius: 15px; text-align: center;">
+                <span style="font-size:10px; color:var(--primary); text-transform:uppercase; font-weight:bold;"><i class="fas fa-arrow-up"></i> Subida</span><br>
+                <b id="detSubida" style="color:white; font-size:1.2rem;">0 GB</b>
+            </div>
+        </div>
+        
+        <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 15px; border-radius: 15px; text-align: center; margin-bottom: 25px;">
+            <span style="font-size:10px; color:var(--warning); text-transform:uppercase; font-weight:bold;"><i class="fas fa-clock"></i> Última Conexión</span><br>
+            <b id="detUltima" style="color:white; font-size:1rem;">---</b>
+        </div>
+
+        <button type="button" onclick="document.getElementById('modalDetalles').style.display='none'" class="btn btn-gray" style="width:100%; padding:15px; border-radius:15px; font-weight:800;">CERRAR DETALLES</button>
+    </div>
+</div>
+
 <?php if (!empty($mt_pendientes)): ?>
 <div id="modalImportMT" style="display:flex; position:fixed; z-index:10000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.9); backdrop-filter:blur(10px); align-items:center; justify-content:center;">
     <div style="background:var(--card); max-width:500px; width:95%; max-height:80vh; overflow-y:auto; padding:25px; border-radius:24px; border:1px solid var(--primary); box-shadow:0 0 30px rgba(59, 130, 246, 0.2);">
@@ -625,7 +700,7 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
     function filtrarTabla(tipo, tarjetaElemento) {
         let filas = document.querySelectorAll('#tablaBody tr');
         let busqueda = document.getElementById('busqueda');
-        
+
         busqueda.value = ""; 
 
         if (filtroActivo === tipo) {
@@ -637,7 +712,7 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
             c.style.borderWidth = "1px";
             c.style.transform = "scale(1)";
         });
-        
+
         if(tipo !== "todos") {
             tarjetaElemento.style.borderWidth = "2px";
             tarjetaElemento.style.transform = "scale(0.98)";
@@ -694,6 +769,20 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
     }
 
     setInterval(monitorDeEstados, 3000);
+
+    // FUNCIÓN PARA VER DETALLES
+    function verDetalles(user, descarga, subida, ultima) {
+        document.getElementById('detUserTit').innerText = user;
+        
+        let dl_gb = (descarga / (1024 * 1024 * 1024)).toFixed(2);
+        let up_gb = (subida / (1024 * 1024 * 1024)).toFixed(2);
+        
+        document.getElementById('detDescarga').innerText = (descarga > 0 ? dl_gb : "0.00") + " GB";
+        document.getElementById('detSubida').innerText = (subida > 0 ? up_gb : "0.00") + " GB";
+        document.getElementById('detUltima').innerText = ultima && ultima.trim() !== '' ? ultima : "Sin registros previos";
+        
+        document.getElementById('modalDetalles').style.display = 'flex';
+    }
 
     function abrirEdit(u, d, h) { 
         const modal = document.getElementById('modalEdit');
@@ -776,6 +865,7 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
             cancelarMasivo();
             document.getElementById('modalEdit').style.display = 'none';
             document.getElementById('modalProrroga').style.display = 'none';
+            document.getElementById('modalDetalles').style.display = 'none';
         }
     });
 </script>
