@@ -10,14 +10,25 @@ if (!isset($_SESSION['admin_auth'])) {
 // --- 2. VERIFICACIÓN DE CONEXIÓN MIKROTIK Y CONTEO EN LÍNEA ---
 $fp = @fsockopen($mikrotik_ip, 8728, $errno, $errstr, 1);
 $conectados_reales = 0; 
+$ips_online = [];
 
 if ($fp) {
     $status_color = "var(--success)";
     $status_text = "Online";
     fclose($fp);
 
-    $cmd_online = "\"$python_path\" \"{$base_dir}estado_cliente.py\" \"global\" \"contar\"";
-    $conectados_reales = (int)shell_exec($cmd_online . " 2>&1");
+    // Obtenemos el JSON con los usuarios conectados reales desde Python
+    $ips_json = shell_exec("\"$python_path\" \"{$base_dir}obtener_ips.py\" 2>&1");
+    $ips_online = json_decode($ips_json, true) ?: [];
+
+    // Cruzamos la data. Solo sumamos +1 si el usuario conectado existe en nuestra tabla 'abonados'
+    $res_db = $conn->query("SELECT user_mikrotik FROM abonados");
+    while ($row = $res_db->fetch_assoc()) {
+        if (isset($ips_online[$row['user_mikrotik']])) {
+            $conectados_reales++;
+        }
+    }
+
 } else {
     $status_color = "var(--danger)";
     $status_text = "Offline";
@@ -34,15 +45,20 @@ if (isset($_POST['btn_modal_pago'])) {
     $dia_p_cliente = (int)($data_u['dia_pago'] ?? 1);
 
     $dia_f = str_pad($dia_p_cliente, 2, "0", STR_PAD_LEFT);
+    // Se le suma 1 mes desde hoy para su nueva fecha de vencimiento
     $fecha_vencimiento = date('Y-m-', strtotime('+1 month')) . $dia_f;
 
     $sql_pago = "INSERT INTO pagos (user_mikrotik, monto, metodo, fecha_pago) VALUES ('$user', $monto, '$metodo', NOW())";
 
     if ($conn->query($sql_pago)) {
+        // Limpiamos la prórroga y activamos el escudo al pagar
         $conn->query("UPDATE abonados SET estado = 'activo', pagado_hasta = '$fecha_vencimiento', proteccion = 1, prorroga_hasta = NULL WHERE user_mikrotik = '$user'");
+
         $u_esc = escapeshellarg($user);
         shell_exec("\"$python_path\" \"{$base_dir}estado_cliente.py\" $u_esc \"activar\" 2>&1");
-        header("Location: index.php?status=ok");
+
+        // Redirigimos pasando los datos para que salte la factura automáticamente
+        header("Location: index.php?status=ok&factura_user=" . urlencode($user) . "&vence=" . urlencode($fecha_vencimiento));
         exit();
     }
 }
@@ -54,8 +70,8 @@ $stats = $conn->query("SELECT
     SUM(CASE WHEN estado = 'cortado' AND (prorroga_hasta IS NULL OR prorroga_hasta <= NOW()) THEN 1 ELSE 0 END) as cortes
     FROM abonados")->fetch_assoc();
 
-// QUITAMOS EL LIMIT 10 PARA QUE EL FILTRO MUESTRE TODOS LOS CLIENTES DEL DÍA
-$clientes_list = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
+// Lista completa para poder filtrar por día
+$clientes_list = $conn->query("SELECT * FROM abonados ORDER BY dia_pago ASC, user_mikrotik ASC");
 
 // --- 5. DATOS PARA LA GRÁFICA ---
 $planes_res = $conn->query("SELECT plan, COUNT(*) as cantidad FROM abonados GROUP BY plan");
@@ -114,29 +130,43 @@ while($row = $res_dias->fetch_assoc()){
         .bg-gray { background: #1e293b; border: 1px solid var(--border); }
 
         .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 25px; }
-        @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } .stats-grid{ grid-template-columns: repeat(2, 1fr); } }
 
         .panel-box { background: var(--bg-card); border-radius: 24px; padding: 20px; border: 1px solid var(--border); }
         .panel-title { font-size: 0.75rem; font-weight: 800; color: var(--text-dim); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; }
 
         .chart-container { position: relative; height: 220px; width: 100%; }
 
-        /* LISTA DE CLIENTES FILTRABLE */
-        .client-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); transition: 0.3s; }
+        /* Estilos del Mapa de Días */
+        .mapa-dias { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: var(--primary) var(--bg-card); }
+        .dia-card { background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); padding: 12px 20px; border-radius: 16px; text-align: center; min-width: 85px; flex-shrink: 0; cursor: pointer; transition: 0.3s; }
+        .dia-card:hover, .dia-card.active { border-color: var(--primary); background: rgba(59, 130, 246, 0.15); transform: translateY(-3px); }
+        
+        /* Lista de Clientes en Dashboard */
+        .client-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); }
         .client-item:last-child { border-bottom: none; }
-        .badge { font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; }
-        .badge.activo { background: rgba(16, 185, 129, 0.15); color: var(--success); }
-        .badge.corte { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+        
+        /* Badge de Pagos y Botones */
+        .estado-pago { font-size: 0.65rem; font-weight: bold; padding: 3px 8px; border-radius: 6px; letter-spacing: 0.5px; display: inline-block; margin-bottom: 5px;}
+        .pago-ok { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .pago-deuda { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .btn-mini { font-size: 0.65rem; padding: 5px 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; color: white; display: flex; align-items: center; gap: 4px; }
 
-        .dia-cobro-card { cursor: pointer; transition: 0.3s; flex-shrink: 0; min-width: 85px; text-align: center; border-radius: 16px; padding: 12px 20px; border: 1px solid rgba(59, 130, 246, 0.2); background: rgba(59, 130, 246, 0.05); }
-        .dia-cobro-card:hover { border-color: var(--primary); background: rgba(59, 130, 246, 0.1); }
-        .dia-active { border-color: var(--primary) !important; background: rgba(59, 130, 246, 0.2) !important; box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+        /* Escudos */
+        .escudo { font-size: 0.8rem; margin-left: 6px; }
+        .escudo-auto { color: var(--shield-auto); }
+        .escudo-manual { color: var(--shield-manual); filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.3)); }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-        #modalPago { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index:1000; align-items:center; justify-content:center; }
+        /* Modales */
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index:1000; align-items:center; justify-content:center; }
         .modal-content { background: #1e293b; padding: 30px; border-radius: 28px; width: 90%; max-width: 380px; border: 1px solid var(--primary); }
         select, input { width: 100%; padding: 14px; margin: 10px 0; background: #020617; color: white; border: 1px solid #334155; border-radius: 12px; font-size: 1rem; }
+        
+        /* Ticket Factura */
+        .ticket { background: #fff; color: #000; padding: 25px 20px; font-family: 'Courier New', Courier, monospace; border-radius: 5px; width: 90%; max-width: 300px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .ticket h2 { text-align: center; margin: 0 0 10px 0; font-size: 1.3rem; font-weight: 900; }
+        .ticket .divider { border-bottom: 2px dashed #000; margin: 15px 0; }
+        .ticket-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem; font-weight: bold; }
         .blink { animation: blinker 1s linear infinite; }
         @keyframes blinker { 50% { opacity: 0; } }
     </style>
@@ -148,6 +178,7 @@ while($row = $res_dias->fetch_assoc()){
             <i class="fas fa-satellite-dish"></i>
             <h1>PRO-DARK ISP</h1>
         </div>
+
         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
             <div class="status-pill" style="color: <?php echo $status_color; ?>; width: 100%;">
                 <i class="fas fa-circle <?php echo ($status_text=='Online'?'':'blink'); ?>"></i> <?php echo $status_text; ?>
@@ -178,7 +209,7 @@ while($row = $res_dias->fetch_assoc()){
     </div>
 
     <div class="menu-btns">
-        <button onclick="abrirModal()" class="btn-action bg-blue">
+        <button onclick="abrirModalPago('')" class="btn-action bg-blue">
             <i class="fas fa-plus-circle"></i> REGISTRAR PAGO RÁPIDO
         </button>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -194,159 +225,229 @@ while($row = $res_dias->fetch_assoc()){
                 <canvas id="planChart"></canvas>
             </div>
         </div>
+
         <div class="panel-box">
             <div class="panel-title"><i class="fas fa-exclamation-triangle" style="color: var(--warning)"></i> Próximos Vencimientos</div>
             <?php if ($vencimientos && $vencimientos->num_rows > 0): ?>
                 <?php while($v = $vencimientos->fetch_assoc()): ?>
-                    <div class="vencimiento-item">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem;">
                         <span style="font-weight: 600;"><?php echo htmlspecialchars($v['user_mikrotik']); ?></span>
-                        <span class="vencimiento-date"><?php echo date("d M", strtotime($v['pagado_hasta'])); ?></span>
+                        <span style="color: var(--warning); font-weight: 700; font-size: 0.75rem; background: rgba(251, 191, 36, 0.1); padding: 3px 8px; border-radius: 6px;"><?php echo date("d M", strtotime($v['pagado_hasta'])); ?></span>
                     </div>
                 <?php endwhile; ?>
             <?php else: ?>
                 <div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; margin-top: 30px;">
                     <i class="fas fa-check-circle" style="font-size: 2rem; opacity: 0.3; margin-bottom: 10px; display: block;"></i>
-                    Red estable.
+                    Red estable.<br>No hay cortes próximos.
                 </div>
             <?php endif; ?>
         </div>
     </div>
 
     <div class="panel-box" style="margin-bottom: 25px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <div class="panel-title" style="margin:0;"><i class="fas fa-calendar-day" style="color: var(--primary);"></i> Mapa de Cobros por Día</div>
-            <button onclick="filtrarPorDia('todos', this)" style="background:none; border:none; color:var(--primary); font-size:10px; font-weight:800; cursor:pointer; text-transform:uppercase;">Ver Todos</button>
-        </div>
+        <div class="panel-title"><i class="fas fa-calendar-day" style="color: var(--primary);"></i> Mapa de Cobros (Filtro)</div>
 
-        <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: var(--primary) var(--bg-card);">
+        <div class="mapa-dias">
             <?php foreach($distribucion_dias as $dd): ?>
-            <div onclick="filtrarPorDia(<?php echo $dd['dia_pago']; ?>, this)" class="dia-cobro-card">
-                <span style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Día <?php echo $dd['dia_pago']; ?></span><br>
+            <div class="dia-card" id="btn-dia-<?php echo $dd['dia_pago']; ?>" onclick="filtrarPorDia('<?php echo $dd['dia_pago']; ?>')">
+                <span style="font-size: 0.7rem; color: var(--text-dim); font-weight: 800;">DÍA <?php echo $dd['dia_pago']; ?></span><br>
                 <b style="font-size: 1.4rem; color: var(--text-main);"><?php echo $dd['cantidad']; ?></b><br>
-                <small style="font-size: 0.6rem; color: var(--primary); font-weight: 700;">CLIENTES</small>
+                <small style="font-size: 0.6rem; color: var(--primary); font-weight: 700;">CLI.</small>
             </div>
             <?php endforeach; ?>
         </div>
     </div>
 
     <div class="panel-box" style="margin-bottom: 30px;">
-        <div class="panel-title" id="titulo-lista"><i class="fas fa-history"></i> Todos los Abonados</div>
-        <div id="contenedor-clientes">
+        <div class="panel-title">
+            <i class="fas fa-users"></i> Clientes 
+            <span id="textoFiltro" style="color: var(--primary); margin-left: 8px;"></span>
+        </div>
+        
+        <div id="contenedorClientes">
             <?php while($c = $clientes_list->fetch_assoc()): 
                 $es_manual = ($c['proteccion_manual'] == 1);
                 $es_auto = ($c['proteccion'] == 1 && !$es_manual);
                 $tiene_prorroga = (!empty($c['prorroga_hasta']) && strtotime($c['prorroga_hasta']) > time());
-                $esta_realmente_activo = ($c['estado'] == 'activo' || $tiene_prorroga);
+                
+                $mes_vencimiento = (int)date('Ym', strtotime($c['pagado_hasta']));
+                $mes_actual = (int)date('Ym');
+                $esta_pagado = ($mes_vencimiento > $mes_actual);
             ?>
-            <div class="client-item lista-cliente-index" data-dia="<?php echo $c['dia_pago']; ?>">
+            <div class="client-item fila-cliente" data-dia="<?php echo $c['dia_pago']; ?>" style="display: none;">
                 <div>
                     <b style="display:flex; align-items:center; font-size:0.9rem;">
                         <?php echo htmlspecialchars($c['user_mikrotik']); ?>
-                        <?php if($es_manual): ?> <i class="fas fa-shield-virus escudo-manual" style="margin-left:5px; color:var(--warning);" title="Protección Manual"></i> <?php endif; ?>
-                        <?php if($es_auto): ?> <i class="fas fa-shield-alt" style="margin-left:5px; color:var(--shield-auto);" title="Protegido por Pago"></i> <?php endif; ?>
-                        <?php if($tiene_prorroga): ?> <i class="fas fa-clock-rotate-left" style="margin-left:5px; color:var(--danger); animation:pulse 1.5s infinite;" title="Prórroga Activa"></i> <?php endif; ?>
+                        <?php if($es_manual): ?>
+                            <i class="fas fa-shield-virus escudo escudo-manual" title="Protección Manual"></i>
+                        <?php elseif($es_auto): ?>
+                            <i class="fas fa-shield-alt escudo escudo-auto" title="Protegido por Pago"></i>
+                        <?php endif; ?>
                     </b>
                     <small style="color:var(--text-dim); font-size:0.7rem;">Corte: Día <?php echo $c['dia_pago']; ?> | <?php echo str_replace('PPPoeClientes-', '', $c['plan']); ?></small>
                 </div>
-                <div class="badge <?php echo ($esta_realmente_activo) ? 'activo' : 'corte'; ?>">
-                    <?php echo ($esta_realmente_activo) ? 'Activo' : 'Corte'; ?>
+                
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+                    <?php if($esta_pagado): ?>
+                        <span class="estado-pago pago-ok"><i class="fas fa-check"></i> PAGADO</span>
+                        <button onclick="mostrarFactura('<?php echo htmlspecialchars($c['user_mikrotik']); ?>', '<?php echo date("d/m/Y", strtotime($c['pagado_hasta'])); ?>')" class="btn-mini" style="background: rgba(59, 130, 246, 0.2); color: var(--primary); border: 1px solid var(--primary);">
+                            <i class="fas fa-receipt"></i> Ver Factura
+                        </button>
+                    <?php else: ?>
+                        <span class="estado-pago pago-deuda"><i class="fas fa-times"></i> PENDIENTE</span>
+                        <button onclick="abrirModalPago('<?php echo htmlspecialchars($c['user_mikrotik']); ?>')" class="btn-mini" style="background: var(--warning); color: #000;">
+                            <i class="fas fa-hand-holding-dollar"></i> Cobrar
+                        </button>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php endwhile; ?>
         </div>
     </div>
 
-    <div id="modalPago" onclick="cerrarModalExterno(event)">
+    <div id="modalPago" class="modal-overlay" onclick="cerrarModalExterno(event, 'modalPago')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <h3 style="margin-top:0; color:var(--primary); font-weight:800;"><i class="fas fa-money-bill-wave"></i> Nuevo Pago</h3>
             <form method="POST">
-                <select name="user_pago" required>
-                    <option value="">Seleccionar Abonado...</option>
+                
+                <select name="user_pago" id="inputUserPago" required style="font-weight:bold; color:var(--primary);">
+                    <option value="">-- Seleccione un Cliente --</option>
                     <?php 
                     $opciones = $conn->query("SELECT user_mikrotik FROM abonados ORDER BY user_mikrotik ASC");
-                    while($o = $opciones->fetch_assoc()) echo "<option value='{$o['user_mikrotik']}'>{$o['user_mikrotik']}</option>";
+                    while($o = $opciones->fetch_assoc()) echo "<option value='".htmlspecialchars($o['user_mikrotik'])."'>".htmlspecialchars($o['user_mikrotik'])."</option>";
                     ?>
                 </select>
-                <input type="number" name="monto" step="0.01" placeholder="Monto en $" required>
+
+                <input type="number" name="monto" step="0.01" placeholder="Monto en $" value="20.00" required>
                 <select name="metodo" required>
                     <option value="Pago Movil">📱 Pago Móvil</option>
                     <option value="Efectivo">💵 Efectivo</option>
                     <option value="Zelle">💳 Zelle</option>
                 </select>
-                <button type="submit" name="btn_modal_pago" class="btn-action bg-blue" style="width:100%; margin-top:10px;">INMUNIZAR Y GUARDAR</button>
-                <button type="button" onclick="cerrarModal()" style="width:100%; background:none; border:none; color:var(--text-dim); margin-top:15px; cursor:pointer; font-weight:700;">CANCELAR</button>
+
+                <button type="submit" name="btn_modal_pago" class="btn-action bg-blue" style="width:100%; margin-top:10px;">
+                    REGISTRAR Y ACTIVAR
+                </button>
+                <button type="button" onclick="cerrarModal('modalPago')" style="width:100%; background:none; border:none; color:var(--text-dim); margin-top:15px; cursor:pointer; font-weight:700;">CANCELAR</button>
             </form>
         </div>
     </div>
 
+    <div id="modalFactura" class="modal-overlay" onclick="cerrarModalExterno(event, 'modalFactura')">
+        <div class="ticket" onclick="event.stopPropagation()">
+            <h2>PRO-DARK ISP</h2>
+            <div style="text-align: center; font-size: 0.7rem; margin-bottom: 10px;">Recibo de Servicio de Internet</div>
+            <div class="divider"></div>
+            
+            <div class="ticket-row"><span>FECHA:</span> <span><?php echo date('d/m/Y'); ?></span></div>
+            <div class="ticket-row"><span>HORA:</span> <span><?php echo date('h:i A'); ?></span></div>
+            <div class="ticket-row"><span>CLIENTE:</span> <span id="ticketUser" style="color:var(--primary);">---</span></div>
+            
+            <div class="divider"></div>
+            
+            <div class="ticket-row"><span>ESTADO:</span> <span style="color: green;">PAGADO OK</span></div>
+            <div class="ticket-row"><span>VENCE:</span> <span id="ticketVence">---</span></div>
+            
+            <div class="divider"></div>
+            <div style="text-align: center; font-size: 0.75rem; font-weight: bold; margin-top: 15px;">
+                ¡Gracias por su pago!<br>Sistema automatizado.
+            </div>
+            
+            <button onclick="window.print()" class="btn-action bg-blue" style="width:100%; margin-top: 20px; padding: 12px; font-size: 0.8rem;">
+                <i class="fas fa-print"></i> IMPRIMIR / CAPTURE
+            </button>
+            <button onclick="cerrarModal('modalFactura')" style="width:100%; background:none; border:none; color:#666; margin-top:10px; cursor:pointer; font-weight:700; font-family: 'Courier New', monospace;">CERRAR</button>
+        </div>
+    </div>
+
     <script>
+        // --- RELOJ EN TIEMPO REAL ---
         function actualizarReloj() {
             const fecha = new Date();
             const opcionesFecha = { weekday: 'short', day: '2-digit', month: 'short' };
             const opcionesHora = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
             document.getElementById('reloj-digital').innerHTML = `${fecha.toLocaleDateString('es-VE', opcionesFecha).toUpperCase()} <span style="color:var(--primary); margin-left:4px;">${fecha.toLocaleTimeString('es-VE', opcionesHora)}</span>`;
         }
-        setInterval(actualizarReloj, 1000);
-        actualizarReloj();
+        setInterval(actualizarReloj, 1000); actualizarReloj();
 
-        function abrirModal() { document.getElementById('modalPago').style.display = 'flex'; }
-        function cerrarModal() { document.getElementById('modalPago').style.display = 'none'; }
-        function cerrarModalExterno(e) { if(e.target.id === 'modalPago') cerrarModal(); }
-
-        // --- FILTRADO DINÁMICO POR DÍA ---
-        function filtrarPorDia(dia, elemento) {
-            const clientes = document.querySelectorAll('.lista-cliente-index');
-            const tarjetas = document.querySelectorAll('.dia-cobro-card');
-            const titulo = document.getElementById('titulo-lista');
-
-            tarjetas.forEach(t => t.classList.remove('dia-active'));
-
-            if (dia === 'todos' || elemento.getAttribute('data-active') === 'true') {
-                clientes.forEach(c => c.style.display = 'flex');
-                tarjetas.forEach(t => t.setAttribute('data-active', 'false'));
-                titulo.innerHTML = '<i class="fas fa-history"></i> Todos los Abonados';
-                return;
+        // --- FUNCIONES DE MODALES ---
+        function abrirModalPago(usuario) { 
+            const select = document.getElementById('inputUserPago');
+            if(usuario) {
+                select.value = usuario; // Auto-selecciona en el dropdown
+            } else {
+                select.value = ''; // Lo deja en blanco para que escojas
             }
+            document.getElementById('modalPago').style.display = 'flex'; 
+        }
+        
+        function mostrarFactura(usuario, vence) {
+            document.getElementById('ticketUser').innerText = usuario;
+            document.getElementById('ticketVence').innerText = vence;
+            document.getElementById('modalFactura').style.display = 'flex';
+        }
+        
+        function cerrarModal(id) { document.getElementById(id).style.display = 'none'; }
+        function cerrarModalExterno(e, id) { if(e.target.id === id) cerrarModal(id); }
 
-            elemento.classList.add('dia-active');
-            tarjetas.forEach(t => t.setAttribute('data-active', 'false'));
-            elemento.setAttribute('data-active', 'true');
-            titulo.innerHTML = `<i class="fas fa-calendar-check"></i> Abonados del Día ${dia}`;
+        // --- AUTO-ABRIR FACTURA SI VIENE DE UN PAGO ---
+        const params = new URLSearchParams(window.location.search);
+        if(params.has('factura_user')) {
+            const rawDate = params.get('vence');
+            const parts = rawDate.split('-');
+            const formatVence = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : rawDate;
+            mostrarFactura(params.get('factura_user'), formatVence);
+            window.history.replaceState({}, document.title, "index.php");
+        }
 
-            clientes.forEach(cliente => {
-                if (cliente.getAttribute('data-dia') == dia) {
-                    cliente.style.display = 'flex';
-                    cliente.style.animation = 'fadeIn 0.3s ease';
+        // --- FILTRO INTERACTIVO DE DÍAS ---
+        function filtrarPorDia(dia) {
+            document.querySelectorAll('.dia-card').forEach(c => c.classList.remove('active'));
+            let btnActivo = document.getElementById('btn-dia-' + dia);
+            if (btnActivo) btnActivo.classList.add('active');
+
+            document.getElementById('textoFiltro').innerText = `(Día ${dia})`;
+
+            const filas = document.querySelectorAll('.fila-cliente');
+            filas.forEach(fila => {
+                if(fila.getAttribute('data-dia') === String(dia)) {
+                    fila.style.display = 'flex';
                 } else {
-                    cliente.style.display = 'none';
+                    fila.style.display = 'none';
                 }
             });
         }
 
+        // --- AUTO-FILTRO AL CARGAR LA PÁGINA ---
+        window.addEventListener('DOMContentLoaded', () => {
+            // Intenta buscar el botón del día actual
+            let diaHoy = <?php echo (int)date('j'); ?>;
+            let btnHoy = document.getElementById('btn-dia-' + diaHoy);
+            
+            if(btnHoy) {
+                // Si hay cobros programados para hoy, los muestra
+                btnHoy.click();
+            } else {
+                // Si no, simplemente selecciona el primer día que haya en el mapa
+                let primerDia = document.querySelector('.dia-card');
+                if(primerDia) primerDia.click();
+            }
+        });
+
+        // --- INICIALIZAR GRÁFICA ---
         const ctx = document.getElementById('planChart').getContext('2d');
         new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: <?php echo json_encode($planes_labels); ?>,
                 datasets: [{
-                    label: 'Clientes',
+                    label: 'Clientes Activos',
                     data: <?php echo json_encode($planes_data); ?>,
                     backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(16, 185, 129, 0.8)', 'rgba(251, 191, 36, 0.8)', 'rgba(139, 92, 246, 0.8)'],
-                    borderColor: ['#3b82f6', '#10b981', '#fbbf24', '#8b5cf6'],
-                    borderWidth: 1,
                     borderRadius: 6
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y',
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#64748b', stepSize: 1 } },
-                    y: { grid: { display: false }, ticks: { color: '#f8fafc', font: { weight: 'bold' } } }
-                }
-            }
+            options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#64748b', stepSize: 1 } }, y: { grid: { display: false }, ticks: { color: '#f8fafc', font: { weight: 'bold' } } } } }
         });
     </script>
 </body>

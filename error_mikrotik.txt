@@ -1,0 +1,651 @@
+Llegó esto: {"user":"Efren", "down":, "up":}
+Llegó esto: {"user":"Juan Varga", "down":, "up":}
+Llegó esto: {"user":"pizzeria", "down":, "up":1213882}
+Llegó esto: {"user":"pizzeria", "down":, "up":1110}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Lisbella", "down":, "up":}
+Llegó esto: {"user":"JhonAbuela", "down":, "up":}
+Llegó esto: {"user":"Omaira", "down":, "up":314483051}
+Llegó esto: {"user":"Jhonder", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Geixer", "down":, "up":}
+Llegó esto: {"user":"Adolfo", "down":, "up":1810557173}
+Llegó esto: {"user":"Silfredo", "down":, "up":}
+Llegó esto: {"user":"Suegro Ruben", "down":, "up":}
+Llegó esto: {"user":"Nuevo", "down":, "up":}
+Llegó esto: {"user":"Efren", "down":, "up":}
+Llegó esto: {"user":"Roxy", "down":, "up":}
+Llegó esto: {"user":"Yoleida", "down":, "up":}
+Llegó esto: {"user":"Yuli", "down":, "up":16763898021}
+Llegó esto: {"user":"Pastor", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Efren", "down":, "up":}
+Llegó esto: {"user":"Paraguita", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Castor", "down":, "up":}
+Llegó esto: {"user":"Palito", "down":, "up":}
+Llegó esto: {"user":"Yuli", "down":, "up":2049236020}
+Llegó esto: {"user":"Yuli", "down":, "up":1054191}
+Llegó esto: {"user":"Alexander", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Derines", "down":, "up":}
+Llegó esto: {"user":"Derines", "down":, "up":426839}
+Llegó esto: {"user":"Yoleida", "down":, "up":}
+Llegó esto: {"user":"pizzeria", "down":, "up":420959951}
+Llegó esto: {"user":"Paraguita", "down":, "up":6976309210}
+Llegó esto: {"user":"Paraguita", "down":, "up":}
+Llegó esto: {"user":"Chucho Barber", "down":, "up":}
+Llegó esto: {"user":"Adolfo", "down":, "up":403690752}
+Llegó esto: {"user":"Yoleida", "down":, "up":}
+Llegó esto: {"user":"Palito", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Palito", "down":, "up":}
+Llegó esto: {"user":"Palito", "down":, "up":}
+Llegó esto: {"user":"Juan Varga", "down":, "up":}
+Llegó esto: {"user":"Derines", "down":, "up":}
+Llegó esto: {"user":"Williams", "down":, "up":}
+Llegó esto: {"user":"Alexander", "down":, "up":}
+Llegó esto: {"user":"Vladimir", "down":, "up":}
+Llegó esto: {"user":"Juan Varga", "down":, "up":1281}
+Llegó esto: {"user":"Derines", "down":, "up":}
+Llegó esto: {"user":"Alexander", "down":, "up":}
+Llegó esto: {"user":"Williams", "down":, "up":}
+Llegó esto: {"user":"Vladimir", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Guardia Casa", "down":, "up":}
+Llegó esto: {"user":"Yoleida", "down":, "up":}
+Llegó esto: {"user":"Consuelo", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Roxy", "down":, "up":}
+Llegó esto: {"user":"Roxy", "down":, "up":0}
+Llegó esto: {"user":"Roxy", "down":, "up":}
+Llegó esto: {"user":"Roxy", "down":, "up":}
+Llegó esto: {"user":"Roxy", "down":, "up":}
+Llegó esto: {"user":"Derines", "down":, "up":}
+Llegó esto: {"user":"Nuevo", "down":, "up":}
+Llegó esto: {"user":"Adolfo", "down":, "up":277574790}
+Llegó esto: {"user":"Jhonder", "down":, "up":5543101840}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Roxy", "down":, "up":}
+Llegó esto: {"user":"Yoleida", "down":, "up":}
+Llegó esto: {"user":"Suegro Ruben", "down":, "up":}
+Llegó esto: {"user":"Efren", "down":, "up":}
+Llegó esto: {"user":"Silfredo", "down":, "up":}
+Llegó esto: {"user":"Yuli", "down":, "up":5500296934}
+Llegó esto: {"user":"JhonAbuela", "down":, "up":}
+Llegó esto: {"user":"Lisbella", "down":, "up":}
+Llegó esto: {"user":"Omaira", "down":, "up":245533133}
+Llegó esto: {"user":"Geixer", "down":, "up":}
+Llegó esto: {"user":"Pastor", "down":, "up":}
+Llegó esto: {"user":"Efren", "down":, "up":}
+Llegó esto: {"user":"Roxy", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Guardia Casa", "down":, "up":}
+Llegó esto: {"user":"Yusmary", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"pizzeria", "down":, "up":551849870}
+Llegó esto: {"user":"Chucho Barber", "down":, "up":}
+Llegó esto: {"user":"Paraguita", "down":, "up":}
+Llegó esto: {"user":"JanKarina", "down":, "up":}
+Llegó esto: {"user":"Silfredo", "down":, "up":}
+Llegó esto: {"user":"Darwin", "down":, "up":}
+Llegó esto: {"user":"Lisbella", "down":, "up":}
+Llegó esto: {"user":"Nuevo", "down":, "up":}
+Llegó esto: {"user":"Yoleida", "down":, "up":}
+Llegó esto: {"user":"Suegro Ruben", "down":, "up":}
+Llegó esto: {"user":"Jhonder", "down":, "up":}
+Llegó esto: {"user":"JhonAbuela", "down":, "up":}
+Llegó esto: {"user":"Adolfo", "down":, "up":174157092}
+Llegó esto: {"user":"Geixer", "down":, "up":}
+Llegó esto: {"user":"Jael", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Roxy", "down":, "up":}
+Llegó esto: {"user":"Yuli", "down":, "up":2009326902}
+Llegó esto: {"user":"Omaira", "down":, "up":87726773}
+Llegó esto: {"user":"Efren", "down":, "up":}
+Llegó esto: {"user":"Lourde", "down":, "up":}
+Llegó esto: {"user":"Ana", "down":, "up":6115329099}
+Llegó esto: {"user":"Jhonder", "down":, "up":}
+Llegó esto: {"user":"YoselinCasa", "down":, "up":2973244842}
+Llegó esto: {"user":"Uclides", "down":, "up":1574441898}
+Llegó esto: {"user":"Yanith", "down":, "up":2178208271}
+Llegó esto: {"user":"Maestro", "down":, "up":}
+Llegó esto: {"user":"Larry", "down":, "up":}
+Llegó esto: {"user":"Roxy", "down":, "up":}
+Llegó esto: {"user":"Jose", "down":, "up":3006955248}
+Llegó esto: {"user":"Adolfo", "down":, "up":}
+Llegó esto: {"user":"Keila", "down":, "up":}
+Llegó esto: {"user":"Castor", "down":, "up":816334421}
+Llegó esto: {"user":"Alexander", "down":, "up":}
+Llegó esto: {"user":"Maryori", "down":, "up":}
+Llegó esto: {"user":"pizzeria", "down":, "up":}
+Llegó esto: {"user":"Alexmary", "down":, "up":}
+Llegó esto: {"user":"Hogalis", "down":, "up":}
+Llegó esto: {"user":"Jael", "down":, "up":108730678}
+Llegó esto: {"user":"Carmen Alarcon", "down":, "up":}
+Llegó esto: {"user":"Darwin", "down":, "up":26435266}
+Llegó esto: {"user":"Williams", "down":, "up":}
+Llegó esto: {"user":"Manuel Polo", "down":, "up":}
+Llegó esto: {"user":"Derines", "down":, "up":}
+Llegó esto: {"user":"Chucho Barber", "down":, "up":}
+Llegó esto: {"user":"Angel mama", "down":, "up":884539929}
+Llegó esto: {"user":"JeanCarlos", "down":, "up":}
+Llegó esto: {"user":"Raul", "down":, "up":4401807086}
+Llegó esto: {"user":"Vladimir", "down":, "up":}
+Llegó esto: {"user":"Elisa", "down":, "up":}
+
+
+95Llegó esto: {"user":"JanKarina", "down":, "up":}
+:312613429}
+Llegó esto: {"user":"Coromoto", "down":, "up":}
+Llegó esto: {"user":"Edgar", "down":, "up":}
+Llegó esto: {"user":"Franchesca", "down":, "up":2039624443}
+Llegó esto: {"user":"Palito", "down":, "up":}
+Llegó esto: {"user":"Juan Varga", "down":, "up":}
+Llegó esto: {"user":"AndreinaToro", "down":, "up":}
+Llegó esto: {"user":"Paraguita", "down":, "up":40593}
+Llegó esto: {"user":"Nuevo", "down":, "up":}
+Llegó esto: {"user":"Suegro Ruben", "down":, "up":257420556}
+Llegó esto: {"user":"Yusmary", "down":, "up":575305224}
+Llegó esto: {"user":"Lisbella", "down":, "up":27004062}
+Llegó esto: {"user":"Consuelo", "down":, "up":1068692022}
+Llegó esto: {"user":"Yuli", "down":, "up":384673994}
+Llegó esto: {"user":"JhonAbuela", "down":, "up":3001438}
+Llegó esto: {"user":"Silfredo", "down":, "up":24273344}
+Llegó esto: {"user":"Yoleida", "down":, "up":16967205}
+Llegó esto: {"user":"Efren", "down":, "up":71034589}
+Llegó esto: {"user":"Geixer", "down":, "up":14645434}
+Llegó esto: {"user":"Omaira", "down":, "up":2399307}
+Llegó esto: {"user":"Leida", "down":, "up":17112582}
+Llegó esto: {"user":"Vladimir", "down":, "up":}
+Llegó esto: {"user":"Franchesca", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":10364}
+Llegó esto: {"user":"Leida", "down":, "up":30802}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Pastor", "down":, "up":755092362}
+Llegó esto: {"user":"Roxy", "down":, "up":502909239}
+Llegó esto: {"user":"AndreinaToro", "down":, "up":163397586}
+Llegó esto: {"user":"Yuli", "down":, "up":1595897552}
+Llegó esto: {"user":"CASA", "down":, "up":1024528292}
+Llegó esto: {"user":"Albe", "down":, "up":}
+Llegó esto: {"user":"Geixer", "down":, "up":}
+Llegó esto: {"user":"Naila", "down":, "up":}
+Llegó esto: {"user":"JhonAbuela", "down":, "up":}
+Llegó esto: {"user":"JanKarina", "down":, "up":}
+Llegó esto: {"user":"Hogalis", "down":, "up":}
+Llegó esto: {"user":"Edgar", "down":, "up":}
+Llegó esto: {"user":"Anibal", "down":, "up":}
+Llegó esto: {"user":"pizzeria", "down":, "up":}
+Llegó esto: {"user":"Elisa", "down":, "up":}
+Llegó esto: {"user":"Lisbella", "down":, "up":}
+Llegó esto: {"user":"Alexander", "down":, "up":}
+Llegó esto: {"user":"Carmen Alarcon", "down":, "up":}
+Llegó esto: {"user":"Suegro Ruben", "down":, "up":}
+Llegó esto: {"user":"Silfredo", "down":, "up":}
+Llegó esto: {"user":"Jhonder", "down":, "up":}
+Llegó esto: {"user":"Yoleida", "down":, "up":}
+Llegó esto: {"user":"Uclides", "down":, "up":}
+Llegó esto: {"user":"Adolfo", "down":, "up":}
+9298262}
+Llegó esto: {"user":"Ana irene", "down":, "up":Llegó esto: {"user":"Alexmary", "down":, "up":}
+4155}
+ó esto: {"user":"Manuel Polo", "down":, "up":}
+Llegó esto: {"user":"Elvito", "down":, "up":}
+5984654}
+Llegó esto: {"user":"Jael", "down":, "up":422885494}
+Llegó esto: {"user":"Yanith", "down":, "up":59799695}
+Llegó esto: {"user":"Jose", "down":, "up":17287994}
+Llegó esto: {"user":"YoselinCasa", "down":, "up":353837294}
+Llegó esto: {"user":"Abraham", "down":, "up":393039456}
+Llegó esto: {"user":"Yusmary", "down":, "up":788904310}
+Llegó esto: {"user":"Derines", "down":, "up":}
+Llegó esto: {"user":"Maestro", "down":, "up":4875505}
+Llegó esto: {"user":"Vladimir", "down":, "up":23180520}
+Llegó esto: {"user":"Samanta", "down":, "up":234566456}
+Llegó esto: {"user":"Jeraiky", "down":, "up":94383557}
+64}
+Llegó esto: {"user":"Castor", "down":, "up":168172639}
+5580}
+Llegó esto: {"user":"Maryori", "down":, "up":518141}
+Llegó esto: {"user":"Guardia", "down":, "up":858939623}
+Llegó esto: {"user":"Williams", "down":, "up":134135303}
+Llegó esto: {"user":"Franchesca", "down":, "up":38748125}
+Llegó esto: {"user":"Darwin", "down":, "up":88862942}
+Llegó esto: {"user":"Leida", "down":, "up":16256593}
+Llegó esto: {"user":"Mary", "down":, "up":26436640}
+Llegó esto: {"user":"Paraguita", "down":, "up":38065}
+Llegó esto: {"user":"Nelsi", "down":, "up":12429884}
+Llegó esto: {"user":"Franchesca", "down":, "up":}
+Llegó esto: {"user":"CASA", "down":, "up":}
+Llegó esto: {"user":"CASA", "down":, "up":}
+Llegó esto: {"user":"CASA", "down":, "up":}
+Llegó esto: {"user":"CASA", "down":, "up":}
+Llegó esto: {"user":"CASA", "down":, "up":}
+Llegó esto: {"user":"CASA", "down":, "up":}
+Llegó esto: {"user":"CASA", "down":, "up":}
+Llegó esto: {"user":"CASA", "down":, "up":}
+Llegó esto: {"user":"CASA", "down":, "up":}
+Llegó esto: {"user":"Pastor", "down":, "up":6266660}
+Llegó esto: {"user":"Ana", "down":, "up":}
+Llegó esto: {"user":"JanKarina", "down":, "up":4889510}
+Llegó esto: {"user":"Lourde", "down":, "up":}
+Llegó esto: {"user":"Vladimir", "down":, "up":3615308}
+Llegó esto: {"user":"Yusmary", "down":, "up":11907622}
+Llegó esto: {"user":"Alexmary", "down":, "up":427454}
+Llegó esto: {"user":"Edgar", "down":, "up":}
+Llegó esto: {"user":"Roxy", "down":, "up":36403883}
+Llegó esto: {"user":"Keila", "down":, "up":}
+Llegó esto: {"user":"Hogalis", "down":, "up":}
+Llegó esto: {"user":"Luis", "down":, "up":35075869}
+Llegó esto: {"user":"Pablo", "down":, "up":16566990}
+Llegó esto: {"user":"Uclides", "down":, "up":1804281}
+Llegó esto: {"user":"Derines", "down":, "up":}
+Llegó esto: {"user":"Ana irene", "down":, "up":}
+
+5063040}
+Llegó esto: {"user":"Coromoto", "down":, "up":146572}
+Llegó esto: {"user":"Williams", "down":, "up":}
+Llegó esto: {"user":"Adolfo", "down":, "up":9045038}
+Llegó esto: {"user":"Oliva", "down":, "up":}
+Llegó esto: {"user":"Larry", "down":, "up":}
+Llegó esto: {"user":"Yuli", "down":, "up":3898238}
+9}
+Llegó esto: {"user":"Darwin", "down":, "up":5224886}
+1}
+Llegó esto: {"user":"JeanCarlos", "down":, "up":}
+56}
+Llegó esto: {"user":"Jose", "down":, "up":1952226}
+Llegó esto: {"user":"Maestro", "down":, "up":146556}
+Llegó esto: {"user":"Castor", "down":, "up":12270714}
+Llegó esto: {"user":"Carmen Alarcon", "down":, "up":12049938}
+Llegó esto: {"user":"AndreinaToro", "down":, "up":2774028}
+Llegó esto: {"user":"YoselinCasa", "down":, "up":32327565}
+Llegó esto: {"user":"Yoselin", "down":, "up":1467003}
+Llegó esto: {"user":"Nuevo", "down":, "up":63721606}
+Llegó esto: {"user":"Jeraiky", "down":, "up":10805650}
+Llegó esto: {"user":"Guardia", "down":, "up":104796725}
+Llegó esto: {"user":"Silfredo", "down":, "up":872841}
+Llegó esto: {"user":"Raul", "down":, "up":3707}
+Llegó esto: {"user":"Angel mama", "down":, "up":8368678}
+Llegó esto: {"user":"Suegro Ruben", "down":, "up":806}
+Llegó esto: {"user":"Paraguita", "down":, "up":6048}
+Llegó esto: {"user":"Naila", "down":, "up":16072674}
+
+Llegó esto: {"user":"Yoleida", "down":, "up":2688253}
+Llegó esto: {"user":"Junior", "down":, "up":9366709}
+Llegó esto: {"user":"Geixer", "down":, "up":13041975}
+Llegó esto: {"user":"Anibal", "down":, "up":11885453}
+Llegó esto: {"user":"Jael", "down":, "up":199724410}
+Llegó esto: {"user":"Lisbella", "down":, "up":23765759}
+Llegó esto: {"user":"Guardia Casa", "down":, "up":7099230}
+Llegó esto: {"user":"Nelsi", "down":, "up":7306977}
+Llegó esto: {"user":"Mary", "down":, "up":195512}
+Llegó esto: {"user":"JhonAbuela", "down":, "up":291257}
+Llegó esto: {"user":"Yanith", "down":, "up":2990137}
+Llegó esto: {"user":"Leida", "down":, "up":27745460}
+Llegó esto: {"user":"CASA", "down":, "up":1135344}
+Llegó esto: {"user":"Abraham", "down":, "up":12997447}
+Llegó esto: {"user":"Franchesca", "down":, "up":}
+Llegó esto: {"user":"Yusmary", "down":, "up":42963172}
+Llegó esto: {"user":"Yusmary", "down":, "up":}
+Llegó esto: {"user":"Alexander", "down":, "up":}
+Llegó esto: {"user":"Palito", "down":, "up":111901128}
+Llegó esto: {"user":"JeanCarlos", "down":, "up":54654790}
+Llegó esto: {"user":"Roxy", "down":, "up":658735003}
+Llegó esto: {"user":"Ana", "down":, "up":180120616}
+Llegó esto: {"user":"Vladimir", "down":, "up":22252747}
+Llegó esto: {"user":"Derines", "down":, "up":227474548}
+Llegó esto: {"user":"Darwin", "down":, "up":112158455}
+Llegó esto: {"user":"Coromoto", "down":, "up":129247514}
+Llegó esto: {"user":"Yanith", "down":, "up":45849276}
+}
+Llegó esto: {"user":"Naila", "down":, "up":129696423}
+Llegó esto: {"user":"Abraham", "down":, "up":176302303}
+Llegó esto: {"user":"Castor", "down":, "up":78261597}
+Llegó esto: {"user":"Suegro Ruben", "down":, "up":}
+Llegó esto: {"user":"Consuelo", "down":, "up":}
+Llegó esto: {"user":"Guardia Casa", "down":, "up":}
+Llegó esto: {"user":"Mary", "down":, "up":36265352}
+Llegó esto: {"user":"Geixer", "down":, "up":}
+Llegó esto: {"user":"Junior", "down":, "up":}
+Llegó esto: {"user":"Yoselin", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":345456017}
+Llegó esto: {"user":"JhonAbuela", "down":, "up":35399248}
+Llegó esto: {"user":"Anibal", "down":, "up":}
+Llegó esto: {"user":"Nuevo", "down":, "up":}
+Llegó esto: {"user":"Guardia", "down":, "up":}
+Llegó esto: {"user":"Raul", "down":, "up":}
+Llegó esto: {"user":"Angel mama", "down":, "up":}
+Llegó esto: {"user":"Yoleida", "down":, "up":}
+Llegó esto: {"user":"Jael", "down":, "up":}
+Llegó esto: {"user":"Silfredo", "down":, "up":}
+Llegó esto: {"user":"Samanta", "down":, "up":}
+Llegó esto: {"user":"Paraguita", "down":, "up":}
+Llegó esto: {"user":"Franchesca", "down":, "up":}
+Llegó esto: {"user":"Jeraiky", "down":, "up":}
+Llegó esto: {"user":"Omaira", "down":, "up":}
+Llegó esto: {"user":"Elisa", "down":, "up":}
+Llegó esto: {"user":"Williams", "down":, "up":}
+Llegó esto: {"user":"AndreinaToro", "down":, "up":}
+Llegó esto: {"user":"Efren", "down":, "up":}
+Llegó esto: {"user":"Maestro", "down":, "up":}
+Llegó esto: {"user":"Lisbella", "down":, "up":}
+Llegó esto: {"user":"YoselinCasa", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Maryori", "down":, "up":}
+Llegó esto: {"user":"Yuli", "down":, "up":}
+Llegó esto: {"user":"Alexander", "down":, "up":}
+Llegó esto: {"user":"Edgar", "down":, "up":}
+Llegó esto: {"user":"Hogalis", "down":, "up":}
+Llegó esto: {"user":"Lourde", "down":, "up":}
+Llegó esto: {"user":"Keila", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Oliva", "down":, "up":}
+Llegó esto: {"user":"Chucho Barber", "down":, "up":}
+Llegó esto: {"user":"Jhonder", "down":, "up":}
+Llegó esto: {"user":"Alexmary", "down":, "up":}
+Llegó esto: {"user":"Ana irene", "down":, "up":}
+Llegó esto: {"user":"Juan Varga", "down":, "up":}
+Llegó esto: {"user":"Larry", "down":, "up":}
+Llegó esto: {"user":"Adolfo", "down":, "up":}
+Llegó esto: {"user":"Carmen Alarcon", "down":, "up":}
+Llegó esto: {"user":"Uclides", "down":, "up":}
+Llegó esto: {"user":"JanKarina", "down":, "up":}
+Llegó esto: {"user":"Jose", "down":, "up":}
+Llegó esto: {"user":"Albe", "down":, "up":}
+Llegó esto: {"user":"Manuel Polo", "down":, "up":}
+Llegó esto: {"user":"Elvito", "down":, "up":}
+Llegó esto: {"user":"Pastor", "down":, "up":}
+Llegó esto: {"user":"CASA", "down":, "up":}
+Llegó esto: {"user":"Luis", "down":, "up":}
+Llegó esto: {"user":"pizzeria", "down":, "up":}
+Llegó esto: {"user":"Vladimir", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":0}
+Llegó esto: {"user":"Franchesca", "down":, "up":}
+Llegó esto: {"user":"Abraham", "down":, "up":1308664}
+Llegó esto: {"user":"Hogalis", "down":, "up":1229978}
+Llegó esto: {"user":"Yanith", "down":, "up":1955553}
+Llegó esto: {"user":"Keila", "down":, "up":3218414}
+Llegó esto: {"user":"Maestro", "down":, "up":435065}
+Llegó esto: {"user":"Larry", "down":, "up":511148}
+Llegó esto: {"user":"Leida", "down":, "up":829062}
+Llegó esto: {"user":"JhonAbuela", "down":, "up":12905}
+Llegó esto: {"user":"Nelsi", "down":, "up":6861165}
+Llegó esto: {"user":"Naila", "down":, "up":1579156}
+Llegó esto: {"user":"Mary", "down":, "up":2156722}
+Llegó esto: {"user":"Angel mama", "down":, "up":847116}
+Llegó esto: {"user":"Yoleida", "down":, "up":7460047}
+Llegó esto: {"user":"AndreinaToro", "down":, "up":}
+Llegó esto: {"user":"Lisbella", "down":, "up":}
+Llegó esto: {"user":"Paraguita", "down":, "up":}
+Llegó esto: {"user":"Raul", "down":, "up":}
+Llegó esto: {"user":"YoselinCasa", "down":, "up":}
+Llegó esto: {"user":"Silfredo", "down":, "up":605220}
+Llegó esto: {"user":"Omaira", "down":, "up":}
+up":}
+}
+Llegó esto: {"user":"Maryori", "down":, "up":}
+519}
+
+
+
+Llegó esto: {"user":"JeanCarlos", "down":, "up":}
+Llegó esto: {"user":"Darwin", "down":, "up":}
+Llegó esto: {"user":"Ana", "down":, "up":}
+Llegó esto: {"user":"Oliva", "down":, "up":}
+
+
+Llegó esto: {"user":"Roxy", "down":, "up":}
+Llegó esto: {"user":"Pastor", "down":, "up":}
+Llegó esto: {"user":"Elvito", "down":, "up":}
+Llegó esto: {"user":"Ana irene", "down":, "up":}
+Llegó esto: {"user":"Alexmary", "down":, "up":}
+Llegó esto: {"user":"Uclides", "down":, "up":}
+Llegó esto: {"user":"Coromoto", "down":, "up":}
+Llegó esto: {"user":"Juan Varga", "down":, "up":}
+Llegó esto: {"user":"Carmen Alarcon", "down":, "up":}
+Llegó esto: {"user":"Lourde", "down":, "up":}
+Llegó esto: {"user":"Elisa", "down":, "up":}
+Llegó esto: {"user":"Derines", "down":, "up":}
+Llegó esto: {"user":"Edgar", "down":, "up":}
+Llegó esto: {"user":"Chucho Barber", "down":, "up":}
+Llegó esto: {"user":"Albe", "down":, "up":}
+:}
+Llegó esto: {"user":"pizzeria", "down":, "up":}
+Llegó esto: {"user":"Williams", "down":, "up":}
+
+Llegó esto: {"user":"JanKarina", "down":, "up":}
+Llegó esto: {"user":"Luis", "down":, "up":}
+}
+Llegó esto: {"user":"Franchesca", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Castor", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Jose", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Paraguita", "down":, "up":}
+Llegó esto: {"user":"Paraguita", "down":, "up":}
+Llegó esto: {"user":"Paraguita", "down":, "up":}
+Llegó esto: {"user":"Uclides", "down":, "up":}
+Llegó esto: {"user":"Alexander", "down":, "up":32704}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Adolfo", "down":, "up":655927402}
+Llegó esto: {"user":"JhonAbuela", "down":, "up":}
+Llegó esto: {"user":"Efren", "down":, "up":}
+Llegó esto: {"user":"Roxy", "down":, "up":}
+Llegó esto: {"user":"Nuevo", "down":, "up":}
+Llegó esto: {"user":"Jhonder", "down":, "up":}
+Llegó esto: {"user":"Yoleida", "down":, "up":}
+Llegó esto: {"user":"Lisbella", "down":, "up":}
+Llegó esto: {"user":"Geixer", "down":, "up":}
+Llegó esto: {"user":"Silfredo", "down":, "up":}
+":}
+Llegó esto: {"user":"Omaira", "down":, "up":117901517}
+Llegó esto: {"user":"Yuli", "down":, "up":27673498}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Pastor", "down":, "up":}
+Llegó esto: {"user":"pizzeria", "down":, "up":}
+Llegó esto: {"user":"Angel mama", "down":, "up":}
+Llegó esto: {"user":"pizzeria", "down":, "up":}
+Llegó esto: {"user":"Jael", "down":, "up":}
+Llegó esto: {"user":"Palito", "down":, "up":}
+Llegó esto: {"user":"Castor", "down":, "up":}
+Llegó esto: {"user":"Samanta", "down":, "up":200633403}
+Llegó esto: {"user":"Nelsi", "down":, "up":35141625}
+Llegó esto: {"user":"Yusmary", "down":, "up":}
+Llegó esto: {"user":"Yusmary", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Efren", "down":, "up":}
+Llegó esto: {"user":"Castor", "down":, "up":}
+Llegó esto: {"user":"Alexmary", "down":, "up":18376979}
+Llegó esto: {"user":"Uclides", "down":, "up":}
+Llegó esto: {"user":"Ana irene", "down":, "up":276628047}
+Llegó esto: {"user":"Jose", "down":, "up":}
+Llegó esto: {"user":"Castor", "down":, "up":}
+Llegó esto: {"user":"Larry", "down":, "up":}
+Llegó esto: {"user":"Hogalis", "down":, "up":}
+Llegó esto: {"user":"Williams", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Mary", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Darwin", "down":, "up":}
+Llegó esto: {"user":"Guardia Casa", "down":, "up":}
+Llegó esto: {"user":"Paraguita", "down":, "up":}
+Llegó esto: {"user":"JeanCarlos", "down":, "up":}
+Llegó esto: {"user":"Pastor", "down":, "up":}
+Llegó esto: {"user":"Yoleida", "down":, "up":}
+Llegó esto: {"user":"Suegro Ruben", "down":, "up":}
+Llegó esto: {"user":"Adolfo", "down":, "up":758316967}
+Llegó esto: {"user":"Silfredo", "down":, "up":}
+Llegó esto: {"user":"JhonAbuela", "down":, "up":}
+Llegó esto: {"user":"Omaira", "down":, "up":145973021}
+Llegó esto: {"user":"Roxy", "down":, "up":}
+Llegó esto: {"user":"Efren", "down":, "up":}
+Llegó esto: {"user":"Nuevo", "down":, "up":}
+Llegó esto: {"user":"Yuli", "down":, "up":4088043923}
+Llegó esto: {"user":"Jhonder", "down":, "up":}
+Llegó esto: {"user":"Efren", "down":, "up":84939}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Paraguita", "down":, "up":}
+Llegó esto: {"user":"Lisbella", "down":, "up":}
+Llegó esto: {"user":"Silfredo", "down":, "up":}
+Llegó esto: {"user":"Jhonder", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"JhonAbuela", "down":, "up":}
+Llegó esto: {"user":"Yoleida", "down":, "up":}
+Llegó esto: {"user":"Geixer", "down":, "up":}
+Llegó esto: {"user":"Suegro Ruben", "down":, "up":}
+Llegó esto: {"user":"Nuevo", "down":, "up":}
+Llegó esto: {"user":"Yuli", "down":, "up":110951061}
+Llegó esto: {"user":"Omaira", "down":, "up":19671136}
+Llegó esto: {"user":"Efren", "down":, "up":}
+Llegó esto: {"user":"Roxy", "down":, "up":}
+81791397}
+Llegó esto: {"user":"Pastor", "down":, "up":}
+Llegó esto: {"user":"Elisa", "down":, "up":}
+Llegó esto: {"user":"Yusmary", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Yusmary", "down":, "up":}
+Llegó esto: {"user":"Efren", "down":, "up":309787}
+Llegó esto: {"user":"Yusmary", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Paraguita", "down":, "up":}
+Llegó esto: {"user":"Mary", "down":, "up":}
+Llegó esto: {"user":"Vladimir", "down":, "up":}
+Llegó esto: {"user":"Geixer", "down":, "up":}
+Llegó esto: {"user":"Leida", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Castor", "down":, "up":}
+Llegó esto: {"user":"Carmen Alarcon", "down":, "up":343320436}
+Llegó esto: {"user":"JeanCarlos", "down":, "up":}
+Llegó esto: {"user":"Darwin", "down":, "up":}
+Llegó esto: {"user":"Guardia Casa", "down":, "up":}
+Llegó esto: {"user":"Williams", "down":, "up":}
+Llegó esto: {"user":"Hogalis", "down":, "up":}
+Llegó esto: {"user":"Manuel Polo", "down":, "up":}
+Llegó esto: {"user":"Abraham", "down":, "up":}
+}
+Llegó esto: {"user":"Jhonder", "down":, "up":}
+Llegó esto: {"user":"Pastor", "down":, "up":}
+Llegó esto: {"user":"Derines", "down":, "up":}
+Llegó esto: {"user":"Derines", "down":, "up":}
+Llegó esto: {"user":"Yusmary", "down":, "up":}
+Llegó esto: {"user":"Guardia", "down":, "up":}
+Llegó esto: {"user":"Yusmary", "down":, "up":}
+Llegó esto: {"user":"Uclides", "down":, "up":287361047}
+Llegó esto: {"user":"Elisa", "down":, "up":}
+Llegó esto: {"user":"Angel mama", "down":, "up":}
+Llegó esto: {"user":"Mary", "down":, "up":}
+Llegó esto: {"user":"Alexander", "down":, "up":}
+Llegó esto: {"user":"Alexmary", "down":, "up":556406896}
+Llegó esto: {"user":"Keila", "down":, "up":}
+Llegó esto: {"user":"Williams", "down":, "up":}
+Llegó esto: {"user":"Larry", "down":, "up":}
+Llegó esto: {"user":"Hogalis", "down":, "up":20194487}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"JanKarina", "down":, "up":}
+Llegó esto: {"user":"JeanCarlos", "down":, "up":}
+Llegó esto: {"user":"Jael", "down":, "up":}
+Llegó esto: {"user":"Consuelo", "down":, "up":}
+Llegó esto: {"user":"Darwin", "down":, "up":}
+Llegó esto: {"user":"Anibal", "down":, "up":}
+Llegó esto: {"user":"Paraguita", "down":, "up":}
+Llegó esto: {"user":"Jeraiky", "down":, "up":}
+Llegó esto: {"user":"Franchesca", "down":, "up":}
+Llegó esto: {"user":"Junior", "down":, "up":}
+Llegó esto: {"user":"Alexander", "down":, "up":326455}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Samanta", "down":, "up":878347321}
+Llegó esto: {"user":"Carmen Alarcon", "down":, "up":81403993}
+Llegó esto: {"user":"Lisbella", "down":, "up":725883199}
+Llegó esto: {"user":"Jose", "down":, "up":135522713}
+Llegó esto: {"user":"Adolfo", "down":, "up":1499396874}
+Llegó esto: {"user":"Abraham", "down":, "up":515795888}
+Llegó esto: {"user":"Leida", "down":, "up":962603872}
+Llegó esto: {"user":"Jhonder", "down":, "up":1345266167}
+Llegó esto: {"user":"Efren", "down":, "up":724052290}
+Llegó esto: {"user":"Elvito", "down":, "up":365835434}
+Llegó esto: {"user":"Pastor", "down":, "up":2844514453}
+Llegó esto: {"user":"Castor", "down":, "up":131879461}
+Llegó esto: {"user":"CASA", "down":, "up":26031749840}
+Llegó esto: {"user":"CASA", "down":, "up":133461}
+Llegó esto: {"user":"CASA", "down":, "up":12988043}
+Llegó esto: {"user":"CASA", "down":, "up":829356}
+Llegó esto: {"user":"Franchesca", "down":, "up":}
+Llegó esto: {"user":"Silfredo", "down":, "up":}
+Llegó esto: {"user":"Omaira", "down":, "up":333854450}
+Llegó esto: {"user":"Roxy", "down":, "up":1535389866}
+Llegó esto: {"user":"Geixer", "down":, "up":}
+Llegó esto: {"user":"Nuevo", "down":, "up":}
+Llegó esto: {"user":"JhonAbuela", "down":, "up":}
+Llegó esto: {"user":"Suegro Ruben", "down":, "up":}
+Llegó esto: {"user":"Yuli", "down":, "up":975574344}
+Llegó esto: {"user":"Yoleida", "down":, "up":}
+Llegó esto: {"user":"CASA", "down":, "up":440058657}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Guardia Casa", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Guardia", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Darwin", "down":, "up":}
+Llegó esto: {"user":"Paraguita", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Pablo", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Jose", "down":, "up":}
+Llegó esto: {"user":"Paraguita", "down":, "up":}
+Llegó esto: {"user":"Yoleida", "down":, "up":}
+Llegó esto: {"user":"Efren", "down":, "up":20359}
+Llegó esto: {"user":"Omaira", "down":, "up":21205}
+Llegó esto: {"user":"Roxy", "down":, "up":}
+Llegó esto: {"user":"Efren", "down":, "up":}
+Llegó esto: {"user":"Silfredo", "down":, "up":}
+Llegó esto: {"user":"Yoleida", "down":, "up":}
+Llegó esto: {"user":"Yoleida", "down":, "up":1224596}
+Llegó esto: {"user":"Efren", "down":, "up":}
+Llegó esto: {"user":"Yuli", "down":, "up":198055481}
+Llegó esto: {"user":"Larry", "down":, "up":}
+Llegó esto: {"user":"Chucho Barber", "down":, "up":}
+Llegó esto: {"user":"Roxy", "down":, "up":}
+Llegó esto: {"user":"Jose", "down":, "up":}
+Llegó esto: {"user":"Omaira", "down":, "up":6972270}
+Llegó esto: {"user":"Paraguita", "down":, "up":}
+Llegó esto: {"user":"Jael", "down":, "up":}
+Llegó esto: {"user":"Nelsi", "down":, "up":}
+Llegó esto: {"user":"Franchesca", "down":, "up":0}

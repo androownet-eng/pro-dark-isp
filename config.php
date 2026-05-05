@@ -65,20 +65,6 @@ while($row = $res_ab->fetch_assoc()) {
 }
 $offline_reales = max(0, $total_abonados - $conectados_reales);
 
-// --- MEJORA: ENDPOINT PARA CONSULTA LIVE ---
-if (isset($_GET['get_status_live'])) {
-    $ahora_str = date('Y-m-d H:i:s');
-    $res = $conn->query("SELECT user_mikrotik, estado, proteccion, proteccion_manual, prorroga_hasta FROM abonados");
-    $data = [];
-    while($row = $res->fetch_assoc()) { 
-        $row['tiene_prorroga'] = (!empty($row['prorroga_hasta']) && $row['prorroga_hasta'] > $ahora_str);
-        $data[$row['user_mikrotik']] = $row; 
-    }
-    header('Content-Type: application/json');
-    echo json_encode($data);
-    exit;
-}
-
 // --- 3. PROCESAMIENTO DE ACCIONES INDIVIDUALES (GET) ---
 if (isset($_GET['accion']) && isset($_GET['user'])) {
     $u = $conn->real_escape_string($_GET['user']);
@@ -131,6 +117,7 @@ if (isset($_POST['crear_usuario'])) {
     $u = $conn->real_escape_string(trim($_POST['user']));
     $p_pass = $conn->real_escape_string(trim($_POST['pass'])); 
     $p_plan = $conn->real_escape_string($_POST['plan']);
+    $telefono = isset($_POST['telefono']) ? $conn->real_escape_string(trim($_POST['telefono'])) : '';
     $d = (int)$_POST['dia_pago'];
     $h = $_POST['hora_corte'];
 
@@ -139,8 +126,8 @@ if (isset($_POST['crear_usuario'])) {
     $dia_f = str_pad($d, 2, "0", STR_PAD_LEFT);
     $fecha_vencimiento = date('Y-m-', strtotime('+1 month')) . $dia_f;
 
-    $sql = "INSERT INTO abonados (user_mikrotik, plan, dia_pago, hora_corte, estado, proteccion, proteccion_manual, pagado_hasta) 
-            VALUES ('$u', '$p_plan', $d, '$h', 'activo', 1, 0, '$fecha_vencimiento')";
+    $sql = "INSERT INTO abonados (user_mikrotik, plan, telefono, dia_pago, hora_corte, estado, proteccion, proteccion_manual, pagado_hasta) 
+            VALUES ('$u', '$p_plan', '$telefono', $d, '$h', 'activo', 1, 0, '$fecha_vencimiento')";
 
     if ($conn->query($sql)) {
         $u_esc = escapeshellarg($u);
@@ -161,12 +148,13 @@ if (isset($_POST['crear_usuario'])) {
 if (isset($_POST['editar_cliente'])) {
     $u = $conn->real_escape_string($_POST['user_edit']); 
     $n_plan = $conn->real_escape_string($_POST['nuevo_plan']); 
+    $n_telefono = isset($_POST['nuevo_telefono']) ? $conn->real_escape_string(trim($_POST['nuevo_telefono'])) : '';
     $n_dia = (int)$_POST['nuevo_dia']; 
     $n_hora = $_POST['nueva_hora'];
 
     $n_estado = ($n_dia >= (int)date('j')) ? 'activo' : 'cortado';
 
-    $sql = "UPDATE abonados SET plan='$n_plan', dia_pago=$n_dia, hora_corte='$n_hora', estado='$n_estado' WHERE user_mikrotik='$u'";
+    $sql = "UPDATE abonados SET plan='$n_plan', telefono='$n_telefono', dia_pago=$n_dia, hora_corte='$n_hora', estado='$n_estado' WHERE user_mikrotik='$u'";
 
     if($conn->query($sql)){
         $accion_py = ($n_estado == 'activo') ? 'activar' : 'cortar';
@@ -408,6 +396,7 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
         <form method="POST" style="padding: 15px;">
             <input type="text" name="user" placeholder="Usuario Mikrotik (RB4011)" required>
             <input type="password" name="pass" placeholder="Contraseña PPP" required> 
+            <input type="text" name="telefono" placeholder="WhatsApp (Ej: 584141234567)" required>
             <select name="plan">
                 <option value="">-- Seleccionar Plan --</option>
                 <?php $p_res = $conn->query("SELECT * FROM planes"); while($p = $p_res->fetch_assoc()) { echo "<option value='".$p['perfil_mikrotik']."'>".$p['nombre_visible']."</option>"; } ?>
@@ -443,15 +432,15 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
             <option value="">-- Cambiar Plan --</option>
             <?php $p_res2 = $conn->query("SELECT * FROM planes"); while($p2 = $p_res2->fetch_assoc()) { echo "<option value='".$p2['perfil_mikrotik']."'>".$p2['nombre_visible']."</option>"; } ?>
         </select>
-        
+
         <button type="submit" name="accion_masiva" value="cambiar_plan" class="btn btn-orange" style="width:100%; margin-bottom:10px; padding:12px; border-radius:20px;">APLICAR PLAN</button>
-        
+
         <div style="display:flex; flex-direction:column; gap:10px;">
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <button type="submit" name="accion_masiva" value="activar" class="btn btn-blue">ACTIVA</button>
                 <button type="submit" name="accion_masiva" value="cortar" class="btn" style="background:var(--warning); color:#000;">CORTA</button>
             </div>
-            
+
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <button type="submit" name="accion_masiva" value="quitar_panel" class="btn btn-gray" onclick="return confirm('¿SEGURO? Esto quitará a todos los clientes seleccionados SOLO del Panel (Seguirán conectados en MikroTik).');">
                     <i class="fas fa-unlink"></i> QUITAR (PANEL)
@@ -494,6 +483,12 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
                     $vence_hoy = ($r['dia_pago'] == $dia_actual && !$esta_realmente_activo) ? '1' : '0';
                     $estado_filtro = $esta_realmente_activo ? 'activo' : 'cortado';
                     $online_filtro = $online ? '1' : '0';
+                    
+                    // PREPARAR DATOS WHATSAPP
+                    $telefono_db = isset($r['telefono']) ? $r['telefono'] : '';
+                    $tel_limpio = preg_replace('/[^0-9]/', '', $telefono_db);
+                    $msj_wa = "Hola *" . $u . "*, te saludamos de *Pro-Dark ISP*. Tu servicio presenta un saldo pendiente. Por favor reporta tu pago.";
+                    $link_wa = "https://api.whatsapp.com/send?phone=$tel_limpio&text=" . urlencode($msj_wa);
                 ?>
                 <tr id="fila-<?php echo htmlspecialchars($u); ?>" data-estado="<?php echo $estado_filtro; ?>" data-online="<?php echo $online_filtro; ?>" data-vence="<?php echo $vence_hoy; ?>">
                     <td class="col-check" style="display:none; text-align:center;"><input type="checkbox" name="usuarios_sel[]" value="<?php echo htmlspecialchars($u); ?>" class="user-check" onchange="actualizarBarra()"></td>
@@ -546,15 +541,19 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
                         <div class="options-dropdown">
                             <button type="button" class="options-btn"><i class="fas fa-ellipsis-v"></i></button>
                             <div class="options-content">
+                                <a href="<?php echo $link_wa; ?>" target="_blank" style="color:#25d366; font-weight:800; font-size:12px;">
+                                    <i class="fab fa-whatsapp" style="font-size:16px;"></i> Notificar Corte
+                                </a>
+                            
                                 <button type="button" onclick="verDetalles('<?php echo htmlspecialchars($u); ?>', '<?php echo $r['descarga_total'] ?? 0; ?>', '<?php echo $r['subida_total'] ?? 0; ?>', '<?php echo $r['ultima_conexion'] ?? ''; ?>')" style="color:#00bcd4">
                                     <i class="fas fa-chart-area"></i> Ver Detalles
                                 </button>
-                                
+
                                 <button type="button" onclick="solicitarProrroga('<?php echo htmlspecialchars($u); ?>')" style="color:var(--warning)">
                                     <i class="fas fa-clock-rotate-left"></i> Dar Prórroga
                                 </button>
-                                
-                                <button type="button" onclick="abrirEdit('<?php echo htmlspecialchars($u); ?>', '<?php echo $r['dia_pago']; ?>', '<?php echo $r['hora_corte']; ?>')" style="color:var(--primary)">
+
+                                <button type="button" onclick="abrirEdit('<?php echo htmlspecialchars($u); ?>', '<?php echo $r['dia_pago']; ?>', '<?php echo $r['hora_corte']; ?>', '<?php echo $telefono_db; ?>')" style="color:var(--primary)">
                                     <i class="fas fa-edit"></i> Editar Ficha
                                 </button>
 
@@ -595,6 +594,11 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
 
         <form method="POST">
             <input type="hidden" name="user_edit" id="userInp">
+
+            <div style="margin-bottom:15px;">
+                <label style="font-size:11px; color:var(--primary); font-weight:800; text-transform:uppercase; margin-left:5px;">Teléfono WhatsApp</label>
+                <input type="text" name="nuevo_telefono" id="telInp" placeholder="Ej: 584141234567" style="width:100%; padding:15px; margin-top:5px; background:#0f172a; border:1px solid var(--border); color:white; border-radius:15px; font-size:15px; outline:none; box-sizing:border-box;">
+            </div>
 
             <div style="margin-bottom:15px;">
                 <label style="font-size:11px; color:var(--primary); font-weight:800; text-transform:uppercase; margin-left:5px;">Plan de Internet</label>
@@ -653,7 +657,7 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
             <h3 id="detUserTit" style="margin:0; color:#fff; font-weight:900; letter-spacing:1px; text-transform:uppercase; font-size:1.2rem;"></h3>
             <p style="color:var(--text-dim); font-size:12px; margin-top:5px;">Estadísticas Acumuladas</p>
         </div>
-        
+
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom: 20px;">
             <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 15px; border-radius: 15px; text-align: center;">
                 <span style="font-size:10px; color:var(--success); text-transform:uppercase; font-weight:bold;"><i class="fas fa-arrow-down"></i> Descarga</span><br>
@@ -664,7 +668,7 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
                 <b id="detSubida" style="color:white; font-size:1.2rem;">0 GB</b>
             </div>
         </div>
-        
+
         <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 15px; border-radius: 15px; text-align: center; margin-bottom: 25px;">
             <span style="font-size:10px; color:var(--warning); text-transform:uppercase; font-weight:bold;"><i class="fas fa-clock"></i> Última Conexión</span><br>
             <b id="detUltima" style="color:white; font-size:1rem;">---</b>
@@ -801,24 +805,25 @@ $clientes = $conn->query("SELECT * FROM abonados ORDER BY user_mikrotik ASC");
     // FUNCIÓN PARA VER DETALLES
     function verDetalles(user, descarga, subida, ultima) {
         document.getElementById('detUserTit').innerText = user;
-        
+
         let dl_gb = (descarga / (1024 * 1024 * 1024)).toFixed(2);
         let up_gb = (subida / (1024 * 1024 * 1024)).toFixed(2);
-        
+
         document.getElementById('detDescarga').innerText = (descarga > 0 ? dl_gb : "0.00") + " GB";
         document.getElementById('detSubida').innerText = (subida > 0 ? up_gb : "0.00") + " GB";
         document.getElementById('detUltima').innerText = ultima && ultima.trim() !== '' ? ultima : "Sin registros previos";
-        
+
         document.getElementById('modalDetalles').style.display = 'flex';
     }
 
-    function abrirEdit(u, d, h) { 
+    function abrirEdit(u, d, h, t) { 
         const modal = document.getElementById('modalEdit');
         modal.style.display = 'flex'; 
         document.getElementById('userTit').innerText = u; 
         document.getElementById('userInp').value = u; 
         document.getElementById('diaInp').value = d; 
         document.getElementById('horaInp').value = h; 
+        if(document.getElementById('telInp')) document.getElementById('telInp').value = t || ''; 
     }
 
     function solicitarProrroga(usuario) {
